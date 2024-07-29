@@ -112,8 +112,8 @@ def image_process_main(shared):
     arg_high_score=0.5
     arg_conf_thresh=0.01
     #video_path="/home/master/Downloads/footage.mp4"
-    video_path="/home/master/Desktop/UAV-control-software/image_processing/demo/demo.mp4"
-    cap = cv2.VideoCapture(video_path)
+    #video_path="/home/master/Desktop/UAV-control-software/image_processing/demo/demo.mp4"
+    cap = cv2.VideoCapture(0)
     # fps
     fps = cap.get(cv2.CAP_PROP_FPS)
 
@@ -127,8 +127,8 @@ def image_process_main(shared):
 
     #video_out = cv2.VideoWriter('/home/master/Desktop/output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))  
 
-    cv2.namedWindow("demo", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("demo", width, height)
+    #cv2.namedWindow("demo", cv2.WINDOW_NORMAL)
+    #cv2.resizeWindow("demo", width, height)
 
     cam_para_path="/home/master/Desktop/UAV-control-software/image_processing/demo/cam_para.txt"
     detector = Detector()
@@ -167,7 +167,7 @@ def image_process_main(shared):
         if sleep_time > 0:
             time.sleep(sleep_time)
 
-        
+        '''
         for det in dets:
             # 画出检测框
             if det.track_id ==number:
@@ -178,14 +178,13 @@ def image_process_main(shared):
                 cv2.rectangle(frame_img, (int(det.bb_left), int(det.bb_top)), (int(det.bb_left+det.bb_width), int(det.bb_top+det.bb_height)), (0, 255, 0), 2)
                 # 画出检测框的id
                 cv2.putText(frame_img, str(det.track_id), (int(det.bb_left), int(det.bb_top)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        
+        '''
         frame_id += 1
+        
 
-
-        # 显示当前帧
-        cv2.imshow("demo", frame_img)
-        if cv2.waitKey(1) & 0xFF== ord('q'):
-            break
+        #cv2.imshow("demo", frame_img)
+        #if cv2.waitKey(1) & 0xFF== ord('q'):
+        #    break
         
 
         

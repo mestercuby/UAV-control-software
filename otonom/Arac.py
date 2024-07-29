@@ -136,6 +136,8 @@ class Arac(RclHandler):
         else:
             self.get_logger().warn("Home pozisyonu ayarlanamadı.")
 
+        self.shared.homep=(latitude,longitude)
+
     def create_node(self):
         rclpy.init('node', anonymous=True)
         

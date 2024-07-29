@@ -18,7 +18,7 @@ class HandleMessageThread(threading.Thread):
     def run(self):
         #Receiving Message
         while True:
-            self.shared.update_client("")
+            self.shared.update_mission("")
             print("receive")
             data=b""
             payload_size = struct.calcsize("L")
@@ -50,17 +50,17 @@ class VideoServerThread(threading.Thread):
         self.socket.bind((ip, port))
         self.timeout_seconds = 5
         self.shared=shared
+        self.client_socket = None
         print("[STARTING] server is starting...")
         print(f"[LISTENING] Server is listening on {ip}")
 
     def run(self):
-        frame_time=1/self.shared.fps
+        frame_time=1/30
         self.socket.listen()
         
-        client_socket, addr = self.socket.accept()
+        self.client_socket, addr = self.socket.accept()
         print(f"[NEW CONNECTION] {addr} connected.")
-        handle_message_thread = HandleMessageThread(client_socket,self.shared)
-        handle_message_thread.start()
+
         while True:
             start_time=time.time()
             print('send')
@@ -69,14 +69,14 @@ class VideoServerThread(threading.Thread):
             if last_update and time.time() - last_update > self.timeout_seconds:
                 print("Detections stream has stopped.")
                 data_to_send = msgpack.packb({"error": "Detections stream has stopped."})
-                client_socket.sendall(data_to_send)
+                self.client_socket.sendall(data_to_send)
                 break
             
             
             detec_data = msgpack.packb(detections)
             detec_data_length = struct.pack("L", len(detec_data)) 
 
-            Error_msg =self.shared.error_msg
+            Error_msg =self.shared.get_error_msg()
             _, encoded_frame = cv2.imencode('.jpg', frame)
             data = encoded_frame.tobytes()
 
@@ -89,8 +89,13 @@ class VideoServerThread(threading.Thread):
             sleep_time=  frame_time - elapsed_time
             if sleep_time > 0:
                 time.sleep(sleep_time)
-            client_socket.sendall(send_length + message + message_size + data + detec_data_length + detec_data)
-            self.shared.error_msg=""
+            self.client_socket.sendall(send_length + message + message_size + data + detec_data_length + detec_data)
+            self.shared.update_error_msg("")
+            if cv2.waitKey(1) & 0xFF== ord('q'):
+                break
+
+            
+        self.client_socket.close()
         print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")
 
 

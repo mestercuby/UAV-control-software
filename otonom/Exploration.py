@@ -6,30 +6,11 @@ from mavros_msgs.msg import *
 from mavros_msgs.srv import *
 from sensor_msgs import *
 from geographic_msgs import * 
-from rclpyhand import RclHandler
+from rclhand import RclHandler
 from TopicServices import TopicService
 from pyproj import CRS, Transformer
 
 class Exploration(RclHandler):
-
-    ## SHARINGDE OLMASI GEREKEN DEĞİŞKENLER
-    lat = None
-    long = None
-    altitude = None
-    volt = None
-    curr = None
-    height = None   ### GÖZLEM İÇİN (VE BELKİ TAKİP İÇİN)
-    lidar_height= None
-
-    obj_detected = False ### GÖZLEM İÇİN
-    konum_x = 320.0
-    konum_y = 240.0
-
-    takip_devam = True
-    mission_finished = False
-
-
-    ##
 
     # Position.Target to Waypoint convertion
     latLongCoordinatesOf4 = [[0]* 2 for _ in range(4)]
@@ -101,19 +82,21 @@ class Exploration(RclHandler):
     wayPointsListAsLatLong = None
 
     # SelectedPoints array
-    selectedPoints = [[0] * 2 for _ in range(4)]
 
 
-    def __init__(self,initialPoint,selectedPoints,location,specifiedHeight):
+    def __init__(self,initialPoint,givenPoints,location,specifiedHeight):
         super().__init__('exploration',400)
 
         self.height = specifiedHeight
+
+        selectedPoints = [[0] * 2 for _ in range(4)]
+
+        self.givenPointsTo4PointsCoordinates(givenPoints,selectedPoints)
 
         self.SERVICE_WP = TopicService("mavros/mission/push", WaypointPush)
         self.SERVICE_SET_MODE = TopicService("/mavros/set_mode", SetMode)
         self.SERVICE_CLEAR_WP = TopicService("/mavros/mission/clear", WaypointClear)
         self.WAYPOINT_REACHED_SUB = self.create_subscription(WaypointReached,'/mavros/mission/reached',self.waypoint_reached_callback,10)
-
 
         # Starting point
         self.x_coordinate = initialPoint[0]
@@ -151,6 +134,9 @@ class Exploration(RclHandler):
 
         initialPointXY = [initialPoint[0],initialPoint[1]]
         self.wayPointsForSMC.insert(0,initialPointXY)
+
+        self.redesignTheAlignmentFrstPnt()
+
         self.wayPointsConvertionFromXYToLatLong(location)
 
         self.coordinates = self.wayPointsListAsLatLong
@@ -162,7 +148,23 @@ class Exploration(RclHandler):
         self.last_waypoint_index = len(self.wayPointsForSMC) - 1
         self.current_waypoint_index = -1
         self.wp_finished = False
-    
+        
+
+    def givenPointsTo4PointsCoordinates(self,givenPoints,sel4PointsCords):
+
+        sel4PointsCords[0][0] = givenPoints[0][0]
+        sel4PointsCords[0][1] = givenPoints[1][1]
+
+        sel4PointsCords[1][0] = givenPoints[0][0]
+        sel4PointsCords[1][1] = givenPoints[0][1]
+
+        sel4PointsCords[2][0] = givenPoints[1][0]
+        sel4PointsCords[2][1] = givenPoints[0][1]
+
+        sel4PointsCords[3][0] = givenPoints[1][0]
+        sel4PointsCords[3][1] = givenPoints[1][1]
+        
+
     def setTheClosestPoint(self):
         distances = [0.0,0.0,0.0,0.0]
 
@@ -290,6 +292,18 @@ class Exploration(RclHandler):
             elif self.selectedPoints[startingPointId][1] < self.selectedPoints[alignmentPoint][1]:
                 self.isUp = True
 
+    def redesignTheAlignmentFrstPnt(self):
+        
+        if self.isHorizontal:
+            if self.isRight:
+                self.wayPointsForSMC[1][0] -= 5 
+            elif self.isLeft:
+                self.wayPointsForSMC[1][0] += 5 
+        elif self.isVertical:
+            if self.isUp:
+                self.wayPointsForSMC[1][1] -= 5 
+            elif self.isDown:
+                self.wayPointsForSMC[1][1] += 5 
 
     def setFirstTwoPoints(self, first, second):
         if self.isHorizontal:
@@ -1484,6 +1498,56 @@ class Exploration(RclHandler):
                                 self.wayPointsForSMC[i][1] = y_o + self.radiusForMinSCM / math.sqrt(2)
                                 self.isFirstSCMDone = False
 
+    ### FOR ROS EXECUTION
+
+    def set_wp_and_run(self):
+        self.service_caller( self.SERVICE_CLEAR_WP, timeout=30)
+        wp_list = []
+
+        for i in range(len(self.coordinates)):
+            wp = Waypoint()
+            if i == (len(self.coordinates) - 1):
+                self.setWaypoints(wp,0,CommandCode.NAV_WAYPOINT,False,False,self.coordinates[i][0],self.coordinates[i][1],self.height)
+            else:
+                self.setWaypoints(wp,0,CommandCode.NAV_WAYPOINT,False,True,self.coordinates[i][0],self.coordinates[i][1],self.height)
+                
+            #wp._z_alt = self.height + self.home_alt
+            wp._z_alt = 589.179993
+            wp_list.insert(i,wp)
+
+        data = WaypointPush.Request()
+        data.waypoints = wp_list
+        self.SERVICE_WP.set_data(data)
+        self.service_caller( self.SERVICE_WP, timeout=30)
+        self.set_mode('AUTO')
+
+    def set_mode(self,mode: str):
+        data = SetMode.Request()
+        data.custom_mode = str(mode)
+        self.SERVICE_SET_MODE.set_data(data)
+        result = self.service_caller(self.SERVICE_SET_MODE, timeout=30)
+        return None 
+
+    def setWaypoints(self,wp:Waypoint,frame,command,is_current,autocontinue,x_lat,y_long,z_alt):
+        
+        ########################################################################################################
+        # !!!!!!!!!!!!! frame şu anda "1" seçilecek simülasyondan dolayı onu "0" gerçek hayatta !!!!!!!!!!!!!!!#
+        ########################################################################################################
+
+
+        wp.frame =frame #  FRAME_GLOBAL_REL_ALT = 3 for more visit http://docs.ros.org/api/mavros_msgs/html/msg/Waypoint.html
+        wp.command = command #'''VTOL TAKEOFF = 84,NAV_WAYPOINT = 16, TAKE_OFF=22 for checking out other parameters go to https://github.com/mavlink/mavros/blob/master/mavros_msgs/msg/CommandCode.msg'''
+        wp.is_current= is_current
+        wp.autocontinue = autocontinue # enable taking and following upcoming waypoints automatically 
+        # wp.param1=param1 # no idea what these are for but the script will work so go ahead
+        # wp.param2=param2
+        # wp.param3=param3
+        wp.x_lat= x_lat 
+        wp.y_long=y_long
+        wp.z_alt= z_alt #relative altitude.
+
+        return wp
+    
     def convertXY_To_RealLocations(self,location):
         
         # Australia => 55 
@@ -1559,47 +1623,6 @@ class Exploration(RclHandler):
         for i in range(1,len(self.wayPointsForSMC)):
 
             self.wayPointsListAsLatLong[i][1], self.wayPointsListAsLatLong[i][0] = transformer_to_latlon.transform(self.wayPointsForSMC[i][0],self.wayPointsForSMC[i][1])
-        ### FOR ROS EXECUTION
-
-    def set_wp_and_run(self):
-        self.service_caller( self.SERVICE_CLEAR_WP, timeout=30)
-        wp_list = []
-
-        for i in range(len(self.coordinates)):
-            wp = Waypoint()
-            if i == (len(self.coordinates) - 1):
-                self.setWaypoints(wp,0,CommandCode.NAV_WAYPOINT,False,False,self.coordinates[i][0],self.coordinates[i][1],self.height)
-            else:
-                self.setWaypoints(wp,0,CommandCode.NAV_WAYPOINT,False,True,self.coordinates[i][0],self.coordinates[i][1],self.height)
-            wp_list.insert(i,wp)
-
-        data = WaypointPush.Request()
-        data.waypoints = wp_list
-        self.SERVICE_WP.set_data(data)
-        self.service_caller( self.SERVICE_WP, timeout=30)
-        self.set_mode('AUTO')
-
-    def set_mode(self,mode: str):
-        data = SetMode.Request()
-        data.custom_mode = str(mode)
-        self.SERVICE_SET_MODE.set_data(data)
-        result = self.service_caller(self.SERVICE_SET_MODE, timeout=30)
-        return None 
-
-    def setWaypoints(self,wp:Waypoint,frame,command,is_current,autocontinue,x_lat,y_long,z_alt):
-        
-        wp.frame =frame #  FRAME_GLOBAL_REL_ALT = 3 for more visit http://docs.ros.org/api/mavros_msgs/html/msg/Waypoint.html
-        wp.command = command #'''VTOL TAKEOFF = 84,NAV_WAYPOINT = 16, TAKE_OFF=22 for checking out other parameters go to https://github.com/mavlink/mavros/blob/master/mavros_msgs/msg/CommandCode.msg'''
-        wp.is_current= is_current
-        wp.autocontinue = autocontinue # enable taking and following upcoming waypoints automatically 
-        # wp.param1=param1 # no idea what these are for but the script will work so go ahead
-        # wp.param2=param2
-        # wp.param3=param3
-        wp.x_lat= x_lat 
-        wp.y_long=y_long
-        wp.z_alt= z_alt #relative altitude.
-
-        return wp
     
     def waypoint_reached_callback(self, msg):
         self.current_waypoint_index = msg.wp_seq

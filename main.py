@@ -1,7 +1,7 @@
 import threading
 import argparse
 import time
-from server.server import VideoServerThread
+from server.server import VideoServerThread,HandleMessageThread
 from image_processing.image_processing import image_process_main
 from image_processing import distance
 from otonom import Exploration,Arac
@@ -10,6 +10,14 @@ def main(args):
     shared=sharing()
     server = VideoServerThread(ip=args.ip ,shared=shared)
     server.start()
+    
+    image_process=threading.Thread(target=image_process_main,args=(shared,))
+    image_process.start()
+
+    while server.client_socket == None:
+        continue
+    handle_message_thread = HandleMessageThread(server.client_socket,shared)
+    handle_message_thread.start()
 
     while True:
         time.sleep(0.1)
@@ -17,11 +25,9 @@ def main(args):
         if  mission=="getready":
             break
 
-    image_process=threading.Thread(target=image_process_main,args=(shared,))
+    
     vehicle = Arac('Araç', 400,shared)
     node_thread=threading.Thread(target=vehicle.create_node)
-
-    image_process.start()
     node_thread.start()
     
 
@@ -32,7 +38,7 @@ def main(args):
             selectedpoints=argument
             break
     print(f"points {selectedpoints} selected for scan")
-
+    explorer=Exploration()
     while True:
         time.sleep(0.1)
         mission,argument=shared.get_mission()
@@ -114,7 +120,7 @@ class sharing:
         self.gimbal_tilt = None
         #otnomi internal
         self.wanted_height = None
-
+        self.homep=None
         #server to CV
         self.track_target = None
 
