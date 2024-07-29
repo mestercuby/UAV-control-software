@@ -58,7 +58,7 @@ class Detector:
 
     def load(self,cam_para_file):
         self.mapper = Mapper(cam_para_file,"MOT17")
-        self.model = YOLO('/home/master/Desktop/Otonom/image_processing/pretrained/yolov8x.pt')
+        self.model = YOLO('/home/master/Desktop/UAV-control-software/image_processing/pretrained/yolov8x.pt')
         #self.model = YOLO('/home/master/Desktop/Nebula-image-processing/yolotrain/runs/detect/visdrone-s/weights/best.pt')
 
 
@@ -111,25 +111,26 @@ def image_process_main(shared):
     arg_cdt=10.0
     arg_high_score=0.5
     arg_conf_thresh=0.01
-    
-    cap = cv2.VideoCapture(0)
+    #video_path="/home/master/Downloads/footage.mp4"
+    video_path="/home/master/Desktop/UAV-control-software/image_processing/demo/demo.mp4"
+    cap = cv2.VideoCapture(video_path)
     # fps
     fps = cap.get(cv2.CAP_PROP_FPS)
 
    
-
+    print("hi")
     
     
 
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    #video_out = cv2.VideoWriter('/home/master/Desktop/ucmctest/output/output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))  
+    #video_out = cv2.VideoWriter('/home/master/Desktop/output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))  
 
-    #cv2.namedWindow("demo", cv2.WINDOW_NORMAL)
-    #cv2.resizeWindow("demo", width, height)
+    cv2.namedWindow("demo", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("demo", width, height)
 
-    cam_para_path="/home/master/Desktop//Otonom/image_processing/demo/cam_para.txt"
+    cam_para_path="/home/master/Desktop/UAV-control-software/image_processing/demo/cam_para.txt"
     detector = Detector()
     detector.load(cam_para_path)
 

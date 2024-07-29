@@ -18,10 +18,13 @@ class Exploration(RclHandler):
     altitude = None
     volt = None
     curr = None
-    obj_detected = False ### GÖZLEM İÇİN
     height = None   ### GÖZLEM İÇİN (VE BELKİ TAKİP İÇİN)
+    lidar_height= None
+
+    obj_detected = False ### GÖZLEM İÇİN
     konum_x = 320.0
     konum_y = 240.0
+
     takip_devam = True
     mission_finished = False
 

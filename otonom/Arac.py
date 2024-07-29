@@ -20,7 +20,6 @@ class Arac(RclHandler):
     altitude = None
     volt = None
     curr = None
-    obj_detected = False ### GÖZLEM İÇİN
     height = None   ### GÖZLEM İÇİN (VE BELKİ TAKİP İÇİN)
     konum_x = 320.0
     konum_y = 240.0
@@ -36,13 +35,13 @@ class Arac(RclHandler):
     armed = None
 
 
-    def __init__(self, node_name: str, rate: int):
+    def __init__(self, node_name: str, rate: int,shared=None):
         super().__init__(node_name,rate)
         self.node_name = node_name
         self.rate = rate
         self.armed = False
         self.gps = NavSatFix()
-        
+        self.shared=shared
         self.TOPIC_STATE = TopicService("/mavros/state", State)
         self.SERVICE_ARM = TopicService("/mavros/cmd/arming", CommandBool)
         self.SERVICE_SET_MODE = TopicService("/mavros/set_mode", SetMode)
@@ -96,9 +95,9 @@ class Arac(RclHandler):
             self.volt = topic.voltage
             self.curr = topic.current
             pass
+    '''
     def start_mission(self):
 
-        # ONAYI MAIN DE YER İSTASYONUNDAN ALACAK
         self.set_mode('GUIDED')
         # ARM OLMA DURUMUNU KONTROL
         if not self.armed:
@@ -118,7 +117,7 @@ class Arac(RclHandler):
             self.obj_track_drone.start_tracking()
         
         self.set_mode('RTL')
-
+    '''
     def set_home_position(self, latitude, longitude, altitude):
         while not self.set_home_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Set Home Position servisi bekleniyor...')
@@ -137,16 +136,14 @@ class Arac(RclHandler):
         else:
             self.get_logger().warn("Home pozisyonu ayarlanamadı.")
 
-def main():
-    rclpy.init('node', anonymous=True)
-    
-    follow_me = Arac('Araç', 400)  # pass coordinates to Arac class
-    try:
-        rclpy.spin(follow_me)
-    except KeyboardInterrupt:
-        pass
-    follow_me.destroy_node()
-    rclpy.shutdown()
+    def create_node(self):
+        rclpy.init('node', anonymous=True)
+        
+          # pass coordinates to Arac class
+        try:
+            rclpy.spin(self)
+        except KeyboardInterrupt:
+            pass
+        self.destroy_node()
+        rclpy.shutdown()
 
-if __name__ == '__main__':
-    main()

@@ -7,16 +7,18 @@ import msgpack
 
 class HandleMessageThread(threading.Thread):
 
-    def __init__(self, client_socket):
+    def __init__(self, client_socket,shared):
         super().__init__()
         self.buffer = 1024
         self.header = 64
         self.format = 'utf-8'
         self.client_socket = client_socket
-
+        self.target = None
+        self.shared=shared
     def run(self):
         #Receiving Message
         while True:
+            self.shared.update_client("")
             print("receive")
             data=b""
             payload_size = struct.calcsize("L")
@@ -30,8 +32,12 @@ class HandleMessageThread(threading.Thread):
                 data += self.client_socket.recv(4096)
             message = data[:msg_length].decode(self.format)
             data = data[msg_length:]
+
+            
             
             print('New Message:', message)
+            self.shared.update_mission(message)
+            time.sleep(0.1)
 
 class VideoServerThread(threading.Thread):
     def __init__(self, ip=socket.gethostbyname(socket.gethostname()), port=5050, buffer=1024, shared=None):
@@ -53,7 +59,7 @@ class VideoServerThread(threading.Thread):
         
         client_socket, addr = self.socket.accept()
         print(f"[NEW CONNECTION] {addr} connected.")
-        handle_message_thread = HandleMessageThread(client_socket)
+        handle_message_thread = HandleMessageThread(client_socket,self.shared)
         handle_message_thread.start()
         while True:
             start_time=time.time()
@@ -70,11 +76,11 @@ class VideoServerThread(threading.Thread):
             detec_data = msgpack.packb(detections)
             detec_data_length = struct.pack("L", len(detec_data)) 
 
-            text = "ahmed!"  # Example text message
+            Error_msg =self.shared.error_msg
             _, encoded_frame = cv2.imencode('.jpg', frame)
             data = encoded_frame.tobytes()
 
-            message = text.encode(self.format)
+            message = Error_msg.encode(self.format)
             msg_length = len(message)
             send_length = struct.pack("L", msg_length)
             message_size = struct.pack("L", len(data))
@@ -84,6 +90,7 @@ class VideoServerThread(threading.Thread):
             if sleep_time > 0:
                 time.sleep(sleep_time)
             client_socket.sendall(send_length + message + message_size + data + detec_data_length + detec_data)
+            self.shared.error_msg=""
         print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")
 
 
