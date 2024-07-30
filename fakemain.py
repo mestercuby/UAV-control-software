@@ -8,22 +8,25 @@ from image_processing.image_processing import image_process_main
 def main(args):
     fps=30
     shared=sharing(fps)
-    server = VideoServerThread(ip=args.ip ,shared=shared)
+    #server = VideoServerThread(ip=args.ip ,shared=shared)
    
     image_process=threading.Thread(target=image_process_main,args=(shared,))
     
-    server.start()
+    #server.start()
     image_process.start()
-
+    
     while server.client_socket == None:
         time.sleep(0.1)
         print("haydi")
     handle_message_thread = HandleMessageThread(server.client_socket,shared)
     handle_message_thread.start()
     
+    while True:
+        time.sleep(0.1)
+        print(shared.mission,shared.argument)
     #image_process_main(shared)
 
-
+    
 class sharing:
     def __init__(self,fps):
         self.last_update_time=None

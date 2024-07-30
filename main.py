@@ -4,9 +4,10 @@ import time
 from server.server import VideoServerThread,HandleMessageThread
 from image_processing.image_processing import image_process_main
 from image_processing import distance
-from otonom import Exploration,Arac
+from otonom import exploration,tracker, vehicle
 
 def main(args):
+    location="Istanbul"
     shared=sharing()
     server = VideoServerThread(ip=args.ip ,shared=shared)
     server.start()
@@ -24,9 +25,8 @@ def main(args):
         mission,argument=shared.get_mission()
         if  mission=="getready":
             break
-
     
-    vehicle = Arac('Araç', 400,shared)
+    vehicle = vehicle.Vehicle('Araç', 100,shared)
     node_thread=threading.Thread(target=vehicle.create_node)
     node_thread.start()
     
@@ -38,13 +38,17 @@ def main(args):
             selectedpoints=argument
             break
     print(f"points {selectedpoints} selected for scan")
-    explorer=Exploration()
+    
+    
+    
     while True:
         time.sleep(0.1)
         mission,argument=shared.get_mission()
         if mission=="takeoff":
             break
     
+    explorer=exploration(shared.homep,selectedpoints,location,argument,shared)
+
     vehicle.set_mode('GUIDED')
     # ARM OLMA DURUMUNU KONTROL
     if not vehicle.armed:
@@ -54,22 +58,30 @@ def main(args):
         # TAKEOFF İÇİN ONAY İSTE
         vehicle.takeoff(argument)
 
-        explore_thread=threading.Thread(target=vehicle.obj_exploration_drone.start_explore)
+        explore_thread=threading.Thread(target=explorer.set_wp_and_run)
         explore_thread.start()
+        shared.mission_finished=False
+
+        
         #mode değiştir
-        ##################   OBJEYİ BULDUĞUNU KONTROL ET #######################
+        
         while True:
             time.sleep(0.1)
             mission,argument=shared.get_mission()
-            if mission=="track":
+            if mission=="track" :
                 vehicle.set_mode('GUIDED')
+                explorer.service_caller( explorer.SERVICE_CLEAR_WP, timeout=30)
+                tracker=tracker.Tracker(shared)
                 ### GUIDED MODA GEÇTİĞİNİ KONTROL ET VE TRACKING BAŞLAT
-                threading.Thread(target=vehicle.obj_track_drone.start_tracking).start()
-                break
-            elif mission=="abort":
-                explore_thread
+                track_thread=threading.Thread(target=explorer.start_track)
+                track_thread.start()
 
-        
+                break
+            elif shared.mission_finished:
+                break
+        # BOTTOM LOOP IS UNNECESSARY 
+        # while not shared.mission_finished:
+        #     continue
         vehicle.set_mode('RTL')
     
 
@@ -131,13 +143,17 @@ class sharing:
     def get_detections(self):
         return self.detections, self.frame, self.last_update_time
     
-
-    def update_CV_readings(self,new_lat,new_long,new_lidar_height,new_uav_tilt,new_gimbal_tilt):
+    ### Yasir biliyorum çıldıracaksın ama sen isimlendirirsin fonksiyonları
+    def update_CV_readings1(self,new_lat,new_long):
         self.lat=new_lat
         self.long=new_long
+
+    def update_CV_readings2(self,new_lidar_height,new_uav_tilt,new_gimbal_tilt):
         self.lidar_height = new_lidar_height
         self.uav_tilt = new_uav_tilt
         self.gimbal_tilt = new_gimbal_tilt
+    ### Değiştirdiğim yerin sonu
+    
     def get_CV_readings(self):
         return self.lat , self.long , self.lidar_height ,self.uav_tilt, self.gimbal_tilt
     
@@ -155,6 +171,12 @@ class sharing:
             elif len(argument)!=1 :
                 self.error_msg=f"wrong argument count for {command} command"
                 return
+            if command=="track":
+                check=False
+                dets,x ,y =self.get_detections()
+                #for det in dets:
+                    #if argument==det['track_id'] :
+                        #NOT FINISHED
             argument=[float(a) for a in argument.split(',')]
 
             
@@ -165,4 +187,8 @@ class sharing:
     def get_mission(self):
         return self.mission , self.argument             
 
+    def update_homep(self,initialpoint):
+        self.homep=initialpoint
+    def get_homep(self):
+        return self.homep
 main(args)
