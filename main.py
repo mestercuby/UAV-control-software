@@ -73,14 +73,18 @@ def main(args):
                 explorer.service_caller( explorer.SERVICE_CLEAR_WP, timeout=30)
                 tracker=tracker.Tracker(shared)
                 ### GUIDED MODA GEÇTİĞİNİ KONTROL ET VE TRACKING BAŞLAT
-                track_thread=threading.Thread(target=explorer.start_track)
+                track_thread=threading.Thread(target=tracker.start_track)
                 track_thread.start()
 
                 break
             elif shared.mission_finished:
                 break
         # BOTTOM LOOP IS UNNECESSARY 
-        # while not shared.mission_finished:
+        while not shared.mission_finished:
+            mission,argument=shared.get_mission()
+            if mission=="abort":
+                shared.mission_finished=True
+                break
         #     continue
         vehicle.set_mode('RTL')
     
@@ -133,7 +137,7 @@ class sharing:
         #otnomi internal
         self.wanted_height = None
         self.homep=None
-        #server to CV
+        #server to otonomi
         self.track_target = None
 
     def update_detections(self,new_detections,new_frame):
@@ -143,19 +147,21 @@ class sharing:
     def get_detections(self):
         return self.detections, self.frame, self.last_update_time
     
-    ### Yasir biliyorum çıldıracaksın ama sen isimlendirirsin fonksiyonları
-    def update_CV_readings1(self,new_lat,new_long):
+
+    def update_coordinates(self,new_lat,new_long):
         self.lat=new_lat
         self.long=new_long
-
-    def update_CV_readings2(self,new_lidar_height,new_uav_tilt,new_gimbal_tilt):
+    
+    def get_coordinates(self):
+        return self.lat,self.long
+    
+    def update_sensors(self,new_lidar_height,new_uav_tilt,new_gimbal_tilt):
         self.lidar_height = new_lidar_height
         self.uav_tilt = new_uav_tilt
         self.gimbal_tilt = new_gimbal_tilt
     ### Değiştirdiğim yerin sonu
-    
-    def get_CV_readings(self):
-        return self.lat , self.long , self.lidar_height ,self.uav_tilt, self.gimbal_tilt
+    def get_sensors(self):
+        return self.lidar_height ,self.uav_tilt, self.gimbal_tilt
     
     
     def update_mission(self,new_message):
@@ -171,14 +177,21 @@ class sharing:
             elif len(argument)!=1 :
                 self.error_msg=f"wrong argument count for {command} command"
                 return
+            
+            argument=[float(a) for a in argument.split(',')]
+
             if command=="track":
                 check=False
                 dets,x ,y =self.get_detections()
-                #for det in dets:
-                    #if argument==det['track_id'] :
-                        #NOT FINISHED
-            argument=[float(a) for a in argument.split(',')]
-
+                for det in dets:
+                    if argument==det['track_id'] :
+                        check=True
+                        break
+                if not check:
+                    self.error_msg=f"object with id {argument} not found"
+                    return
+                else :
+                    self.track_target=argument
             
             self.argument=argument
         else :

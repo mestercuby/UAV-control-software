@@ -60,36 +60,14 @@ class Vehicle(RclHandler):
 
     def global_position_cb(self, topic):
             #self.get_logger().info("x %f: y: %f, z: %f" % (topic.latitude, topic.longitude, topic.altitude))
-            self.shared.update_CV_readings1(self,topic.latitude,topic.longitude)
+            self.shared.update_coordinates(topic.latitude,topic.longitude)
             pass
     def battery_cb(self, topic):
             #self.get_logger().info("V %s: I: %s" % (topic.voltage, topic.current))
             self.volt = topic.voltage
             self.curr = topic.current
             pass
-    '''
-    def start_mission(self):
 
-        self.set_mode('GUIDED')
-        # ARM OLMA DURUMUNU KONTROL
-        if not self.armed:
-            self.arm(True)
-
-        # KOODİNATLARIN SEÇİLİ OLMASI GEREK
-        # TAKEOFF İÇİN ONAY İSTE
-        self.takeoff(self.height)
-
-        self.obj_exploration_drone.start_explore()
-        
-        #mode değiştir
-        ##################   OBJEYİ BULDUĞUNU KONTROL ET #######################
-        if self.obj_detected :
-            self.set_mode('GUIDED')
-        ### GUIDED MODA GEÇTİĞİNİ KONTROL ET VE TRACKING BAŞLAT
-            self.obj_track_drone.start_tracking()
-        
-        self.set_mode('RTL')
-    '''
     def set_home_position(self, latitude, longitude, altitude):
         self.wait_for_service('/mavros/cmd/set_home')
         
@@ -113,7 +91,7 @@ class Vehicle(RclHandler):
 
     def create_node(self):
         rospy.init_node("Vehicle")
-        follow_me = Arac('Araç', 400)  # pass coordinates to Arac class
+        follow_me = Vehicle('Araç', 400)  # pass coordinates to Arac class
         try:
             rospy.spin()
         except KeyboardInterrupt:

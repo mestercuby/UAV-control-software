@@ -38,6 +38,7 @@ class Tracker(rospyhand):
         self.publisher = self.Publisher('/mavros/setpoint_raw/local',PositionTarget ,10)
 
     def start_track(self):
+        
         while not self.shared.mission_finished:
             # YÖNLER HATALI OLABİLİR DEĞİŞTİR
             if 0 > self.shared.location[0] - (self.piksel_x // 2):

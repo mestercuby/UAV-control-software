@@ -8,7 +8,7 @@ from image_processing.image_processing import image_process_main
 def main(args):
     fps=30
     shared=sharing(fps)
-    #server = VideoServerThread(ip=args.ip ,shared=shared)
+    server = VideoServerThread(ip=args.ip ,shared=shared)
    
     image_process=threading.Thread(target=image_process_main,args=(shared,))
     
