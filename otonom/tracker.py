@@ -1,13 +1,13 @@
 from mavros_msgs.msg import *
 from mavros_msgs.srv import *
-from rclpyhand import RclHandler
+from otonom.rospyhand import RclHandler
 from TopicServices import TopicService
 import time
 import math
 from typing import List
 import rclpy
 
-class Tracker(RclHandler):
+class Tracker(rospyhand):
 
     kamera_fov_yatay = 63.0
     kamera_fov_dikey = 38.0
@@ -35,7 +35,7 @@ class Tracker(RclHandler):
         super().__init__('takip',100)
         self.shared=shared
         self.target = PositionTarget()
-        self.publisher = self.create_publisher(PositionTarget,'/mavros/setpoint_raw/local', 10)
+        self.publisher = self.Publisher('/mavros/setpoint_raw/local',PositionTarget ,10)
 
     def start_track(self):
         while not self.shared.mission_finished:
