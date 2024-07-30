@@ -1515,14 +1515,14 @@ class Exploration(RclHandler):
             wp._z_alt = 589.179993
             wp_list.insert(i,wp)
 
-        data = WaypointPush.Request()
+        data = WaypointPushRequest()
         data.waypoints = wp_list
         self.SERVICE_WP.set_data(data)
         self.service_caller( self.SERVICE_WP, timeout=30)
         self.set_mode('AUTO')
 
     def set_mode(self,mode: str):
-        data = SetMode.Request()
+        data = SetModeRequest()
         data.custom_mode = str(mode)
         self.SERVICE_SET_MODE.set_data(data)
         result = self.service_caller(self.SERVICE_SET_MODE, timeout=30)
@@ -1626,7 +1626,7 @@ class Exploration(RclHandler):
     
     def waypoint_reached_callback(self, msg):
         self.current_waypoint_index = msg.wp_seq
-        self.get_logger().info(f"Waypoint {self.current_waypoint_index} reached")
+        self.loginfo(f"Waypoint {self.current_waypoint_index} reached")
 
         if self.current_waypoint_index == self.last_waypoint_index:
             self.shared.mission_finished=True
