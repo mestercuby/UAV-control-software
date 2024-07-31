@@ -1,12 +1,12 @@
 import math
 import time
-import rclpy  # ROS2 Python Framework
-from rclpy.node import Node
+# import rclpy  # ROS2 Python Framework
+import rospy
 from mavros_msgs.msg import *
 from mavros_msgs.srv import *
 from sensor_msgs import *
 from geographic_msgs import * 
-from rclhand import RclHandler
+from otonom.rospyhand import rospyhand
 from TopicServices import TopicService
 from pyproj import CRS, Transformer
 
@@ -83,12 +83,12 @@ class Exploration(RclHandler):
 
     # SelectedPoints array
 
-
-    def __init__(self,initialPoint,givenPoints,location,specifiedHeight,shared):
+    #def __init__(self,initialPoint,givenPoints,location,specifiedHeight,shared):
+    def __init__(self,initialPoint,givenPoints,location,specifiedHeight):
         super().__init__('exploration',400)
 
         self.height = specifiedHeight
-        self.shared=shared
+        #self.shared=shared
         selectedPoints = [[0] * 2 for _ in range(4)]
 
         self.givenPointsTo4PointsCoordinates(givenPoints,selectedPoints)
@@ -96,7 +96,10 @@ class Exploration(RclHandler):
         self.SERVICE_WP = TopicService("mavros/mission/push", WaypointPush)
         self.SERVICE_SET_MODE = TopicService("/mavros/set_mode", SetMode)
         self.SERVICE_CLEAR_WP = TopicService("/mavros/mission/clear", WaypointClear)
-        self.WAYPOINT_REACHED_SUB = self.create_subscription(WaypointReached,'/mavros/mission/reached',self.waypoint_reached_callback,10)
+
+        #Changed
+        #self.WAYPOINT_REACHED_SUB = self.create_subscription(WaypointReached,'/mavros/mission/reached',self.waypoint_reached_callback,10)
+        self.WAYPOINT_REACHED_SUB = rospy.Subscriber('/mavros/mission/reached', WaypointReached, self.waypoint_reached_callback)
 
         # Starting point
         self.x_coordinate = initialPoint[0]
@@ -1626,8 +1629,8 @@ class Exploration(RclHandler):
     
     def waypoint_reached_callback(self, msg):
         self.current_waypoint_index = msg.wp_seq
-        self.loginfo(f"Waypoint {self.current_waypoint_index} reached")
+        rospy.loginfo(f"Waypoint {self.current_waypoint_index} reached")
 
         if self.current_waypoint_index == self.last_waypoint_index:
-            self.shared.mission_finished=True
-
+            print("Mahmut Esat")
+            #self.shared.mission_finished=True

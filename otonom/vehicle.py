@@ -12,17 +12,17 @@ from mavros.base import SENSOR_QOS
 
 
 
-class Vehicle(RclHandler):
+class Vehicle(rospyhand):
     mode = None
     armed = None
 
-
-    def __init__(self, node_name: str, rate: int,shared=None):
+    #def __init__(self, node_name: str, rate: int,shared=None):
+    def __init__(self, node_name: str):
         self.node_name = node_name
-        self.rate = rate
+        #self.rate = rate
         self.armed = False
         self.gps = NavSatFix()
-        self.shared=shared
+        #self.shared=shared
         self.TOPIC_STATE = TopicService("/mavros/state", State)
         self.SERVICE_ARM = TopicService("/mavros/cmd/arming", CommandBool)
         self.SERVICE_SET_MODE = TopicService("/mavros/set_mode", SetMode)
@@ -59,11 +59,11 @@ class Vehicle(RclHandler):
         return result.mode_sent  
 
     def global_position_cb(self, topic):
-            #self.get_logger().info("x %f: y: %f, z: %f" % (topic.latitude, topic.longitude, topic.altitude))
-            self.shared.update_coordinates(topic.latitude,topic.longitude)
+            self.loginfo("x %f: y: %f, z: %f" % (topic.latitude, topic.longitude, topic.altitude))
+            #self.shared.update_coordinates(topic.latitude,topic.longitude)
             pass
     def battery_cb(self, topic):
-            #self.get_logger().info("V %s: I: %s" % (topic.voltage, topic.current))
+            self.loginfo("V %s: I: %s" % (topic.voltage, topic.current))
             self.volt = topic.voltage
             self.curr = topic.current
             pass
@@ -87,11 +87,11 @@ class Vehicle(RclHandler):
         except self.ServiceException as e:
             self.logerr(f"Service call failed: {e}")
         initialpoint=(latitude,longitude,altitude)
-        self.shared.update_homep(initialpoint)
+        #self.shared.update_homep(initialpoint)
 
     def create_node(self):
         rospy.init_node("Vehicle")
-        follow_me = Vehicle('Araç', 400)  # pass coordinates to Arac class
+        follow_me = Vehicle('Araç')  # pass coordinates to Arac class
         try:
             rospy.spin()
         except KeyboardInterrupt:
