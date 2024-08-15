@@ -6,6 +6,35 @@ from image_processing.detector.mapper import Mapper
 import numpy as np
 import time
 
+def calculate_iou(box1, box2):
+    """
+    Calculate the Intersection over Union (IoU) of two bounding boxes.
+
+    Parameters:
+    box1 (tuple): (x1, y1, x2, y2) coordinates of the first box
+    box2 (tuple): (x1, y1, x2, y2) coordinates of the second box
+
+    Returns:
+    float: IoU value
+    """
+
+    # Calculate the (x, y)-coordinates of the intersection rectangle
+    xA = max(box1[0], box2[0])
+    yA = max(box1[1], box2[1])
+    xB = min(box1[2], box2[2])
+    yB = min(box1[3], box2[3])
+
+    # Compute the area of intersection rectangle
+    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+
+    # Compute the area of both the prediction and ground-truth rectangles
+    box1Area = (box1[2] - box1[0] + 1) * (box1[3] - box1[1] + 1)
+    box2Area = (box2[2] - box2[0] + 1) * (box2[3] - box2[1] + 1)
+
+    # Compute the intersection over union
+    iou = interArea / float(box1Area + box2Area - interArea)
+
+    return iou
 
     
 
@@ -18,6 +47,7 @@ class Detection:
         self.bb_top = bb_top
         self.bb_width = bb_width
         self.bb_height = bb_height
+        self.bbox=[]
         self.conf = conf
         self.det_class = det_class
         self.track_id = 0
@@ -76,6 +106,7 @@ class Detector:
         for box in results[0].boxes:
             conf = box.conf.cpu().numpy()[0]
             bbox = box.xyxy.cpu().numpy()[0]
+            
             cls_id  = box.cls.cpu().numpy()[0]
             w = bbox[2] - bbox[0]
             h = bbox[3] - bbox[1]
@@ -91,6 +122,7 @@ class Detector:
             det.conf = conf
             det.det_class = cls_id
             det.y,det.R = self.mapper.mapto([det.bb_left,det.bb_top,det.bb_width,det.bb_height])
+            det.bbox=bbox
             det_id += 1
 
               
@@ -102,7 +134,7 @@ class Detector:
 def image_process_main(shared):
     number = -1
     class_list = [0,2,5,7]
-    valid_dets={}
+    mega_lost_dets=[]
     threshold_time=0.5
     arg_a=100.0
     arg_wx=5
@@ -113,7 +145,7 @@ def image_process_main(shared):
     arg_conf_thresh=0.01
     #video_path="/home/master/Downloads/footage.mp4"
     #video_path="/home/master/Desktop/UAV-control-software/image_processing/demo/demo.mp4"
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture("/home/master/Desktop/UAV-control-software/final_output.mp4")
     # fps
     fps = cap.get(cv2.CAP_PROP_FPS)
 
@@ -125,7 +157,7 @@ def image_process_main(shared):
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    #video_out = cv2.VideoWriter('/home/master/Desktop/output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))  
+    video_out = cv2.VideoWriter('/home/master/Desktop/flight1_output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))  
 
     #cv2.namedWindow("demo", cv2.WINDOW_NORMAL)
     #cv2.resizeWindow("demo", width, height)
@@ -140,61 +172,85 @@ def image_process_main(shared):
     frame_time = 1 / fps
 
     frame_id = 1
-
-
-
+    print(fps)
+    print(frame_time)
+    new_dets = []
+    current_dets = []
     while True:
         start_time=time.time()
+        
         detections_list=[]
         ret, frame_img = cap.read()
         if not ret:  
             break
-    
+        
         dets = detector.get_dets(frame_img,arg_conf_thresh,class_list)
         tracker.update(dets,frame_id)
         
-        for det in dets :
-            if det.track_id not in valid_dets:
-                 valid_dets[det.track_id]=time.time()
-            elif time.time()- valid_dets[det.track_id] >=threshold_time :
-                detections_list.append(det.to_dict())
+        if frame_id > 2:
+
+            lost_dets = [det for det in old_dets if det.track_id not in [det.track_id for det in dets]]
+            new_dets = [det for det in dets if det.track_id not in [det.track_id for det in old_dets]]
+            current_dets = [det for det in dets if det.track_id not in [det.track_id for det in new_dets]]
+
+            for det in lost_dets:
+                mega_lost_dets.append((det,frame_id))
+                print(f"detection lost:{det.track_id}")
+            for ndet in new_dets:
+                print(f"new detection:{ndet.track_id}")
+            for ldet in mega_lost_dets:
+                if frame_id - ldet[1] > 5: 
+                    mega_lost_dets.remove(ldet)
+                else:
+                    for ndet in new_dets:
+                        if calculate_iou(ldet[0].bbox,ndet.bbox) > 0.5:
+                            print(f"ldet:{ldet[0].track_id} ndet:{ndet.track_id}")
+                            ndet.track_id = ldet[0].track_id
+                            mega_lost_dets.remove(ldet)
+                            
+                            break
         
-        shared.update_detections(detections_list,frame_img)
-
-
+        '''     
+        elif time.time()- valid_dets[det.track_id] >=threshold_time :
+                detections_list.append(det.to_dict())
+        #shared.update_detections(detections_list,frame_img)
+        '''
+        
         elapsed_time= time.time() -start_time
         sleep_time= frame_time - elapsed_time
         if sleep_time > 0:
             time.sleep(sleep_time)
-
-        '''
-        for det in dets:
+        
+        for det in new_dets:
+            print(det.track_id)
             # 画出检测框
-            if det.track_id ==number:
-                cv2.rectangle(frame_img, (int(det.bb_left), int(det.bb_top)), (int(det.bb_left+det.bb_width), int(det.bb_top+det.bb_height)), (255, 0, 0), 2)
+            if det.track_id > 0:
+                cv2.rectangle(frame_img, (int(det.bb_left), int(det.bb_top)), (int(det.bb_left+det.bb_width), int(det.bb_top+det.bb_height)), (0, 255, 0), 2)
                 # 画出检测框的id
-                cv2.putText(frame_img, str(det.track_id), (int(det.bb_left), int(det.bb_top)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            elif det.track_id > 0:
+                cv2.putText(frame_img, str(det.track_id), (int(det.bb_left), int(det.bb_top)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+        for det in current_dets:
+            print(det.track_id)
+            # 画出检测框
+            if det.track_id > 0:
                 cv2.rectangle(frame_img, (int(det.bb_left), int(det.bb_top)), (int(det.bb_left+det.bb_width), int(det.bb_top+det.bb_height)), (0, 255, 0), 2)
                 # 画出检测框的id
                 cv2.putText(frame_img, str(det.track_id), (int(det.bb_left), int(det.bb_top)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        '''
         frame_id += 1
         
 
-        #cv2.imshow("demo", frame_img)
-        #if cv2.waitKey(1) & 0xFF== ord('q'):
-        #    break
+        cv2.imshow("demo", frame_img)
+        if cv2.waitKey(1) & 0xFF== ord('q'):
+            break
         
 
         
 
 
-
-        #video_out.write(frame_img)
+        old_dets = dets
+        video_out.write(frame_img)
     
     cap.release()
-    #video_out.release()
+    video_out.release()
     cv2.destroyAllWindows()
 
 
