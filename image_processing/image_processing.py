@@ -5,7 +5,7 @@ from image_processing.tracker.ucmc import UCMCTrack
 from image_processing.detector.mapper import Mapper
 import numpy as np
 import time
-
+import math
 def calculate_iou(box1, box2):
     """
     Calculate the Intersection over Union (IoU) of two bounding boxes.
@@ -36,7 +36,51 @@ def calculate_iou(box1, box2):
 
     return iou
 
+def calculate_center(bbox):
+    x_center = (bbox[0] + bbox[2]) / 2
+    y_center = (bbox[1] + bbox[3]) / 2
+    return (x_center, y_center)
+
+def calculate_distance(center1, center2):
+    return math.sqrt((center1[0] - center2[0]) ** 2 + (center1[1] - center2[1]) ** 2)
+
+def merge_bboxes(group):
+    x_min = min(det.bbox[0] for det in group)
+    y_min = min(det.bbox[1] for det in group)
+    x_max = max(det.bbox[2] for det in group)
+    y_max = max(det.bbox[3] for det in group)
+    id = min(det.track_id for det in group)
+    return [id, x_min, y_min, x_max, y_max]
+
+def grouping(current_dets, max_distance=100):
+    groups = []
+    visited = [False] * len(current_dets)
     
+    for i in range(len(current_dets)):
+        if visited[i]:
+            continue
+        
+        group = [current_dets[i]]
+        visited[i] = True
+
+        if current_dets[i].track_id > 0:
+            center1 = calculate_center(current_dets[i].bbox)
+            for j in range(i + 1, len(current_dets)):
+                if visited[j]:
+                    continue
+                
+                center2 = calculate_center(current_dets[j].bbox)
+                distance = calculate_distance(center1, center2)
+                
+                if distance <= max_distance:
+                    group.append(current_dets[j])
+                    visited[j] = True
+        
+        groups.append(group)
+    
+    merged_bboxes = [merge_bboxes(group) for group in groups]
+    
+    return merged_bboxes
 
 # Detection:id,bb_left,bb_top,bb_width,bb_height,conf,det_class
 class Detection:
@@ -145,7 +189,7 @@ def image_process_main(shared):
     arg_conf_thresh=0.01
     #video_path="/home/master/Downloads/footage.mp4"
     #video_path="/home/master/Desktop/UAV-control-software/image_processing/demo/demo.mp4"
-    cap = cv2.VideoCapture("/home/master/Desktop/UAV-control-software/final_output.mp4")
+    cap = cv2.VideoCapture("/home/master/Desktop/UAV-control-software/son.mp4")
     # fps
     fps = cap.get(cv2.CAP_PROP_FPS)
 
@@ -157,7 +201,7 @@ def image_process_main(shared):
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    video_out = cv2.VideoWriter('/home/master/Desktop/flight1_output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))  
+    video_out = cv2.VideoWriter('/home/master/Desktop/son1.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))  
 
     #cv2.namedWindow("demo", cv2.WINDOW_NORMAL)
     #cv2.resizeWindow("demo", width, height)
@@ -176,6 +220,7 @@ def image_process_main(shared):
     print(frame_time)
     new_dets = []
     current_dets = []
+    groups = []
     while True:
         start_time=time.time()
         
@@ -209,7 +254,11 @@ def image_process_main(shared):
                             mega_lost_dets.remove(ldet)
                             
                             break
-        
+           
+            current_dets.extend(new_dets)
+            groups = grouping(current_dets)
+          
+                        
         '''     
         elif time.time()- valid_dets[det.track_id] >=threshold_time :
                 detections_list.append(det.to_dict())
@@ -220,7 +269,7 @@ def image_process_main(shared):
         sleep_time= frame_time - elapsed_time
         if sleep_time > 0:
             time.sleep(sleep_time)
-        
+        """
         for det in new_dets:
             print(det.track_id)
             # 画出检测框
@@ -235,6 +284,23 @@ def image_process_main(shared):
                 cv2.rectangle(frame_img, (int(det.bb_left), int(det.bb_top)), (int(det.bb_left+det.bb_width), int(det.bb_top+det.bb_height)), (0, 255, 0), 2)
                 # 画出检测框的id
                 cv2.putText(frame_img, str(det.track_id), (int(det.bb_left), int(det.bb_top)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        """
+
+ 
+
+        for group in groups:
+            id = group[0]
+            x_min = group[1]
+            y_min = group[2]
+            x_max = group[3]
+            y_max = group[4]
+
+            if id > 0:
+                cv2.rectangle(frame_img, (int(x_min), int(y_min)), (int(x_max), int(y_max)), (0, 255, 0), 2)
+                cv2.putText(frame_img, str(id), (int(x_min), int(y_min)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+
+  
+
         frame_id += 1
         
 
