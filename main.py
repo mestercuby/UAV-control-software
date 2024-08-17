@@ -4,7 +4,7 @@ import time
 from server.server import VideoServerThread,HandleMessageThread
 from image_processing.image_processing import image_process_main
 from image_processing import distance
-from otonom import exploration,tracker, vehicle
+from otonom import exploration,tracker, Vehicle
 
 def main(args):
     location="Istanbul"
