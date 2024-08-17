@@ -6,6 +6,8 @@ from image_processing.detector.mapper import Mapper
 import numpy as np
 import time
 import math
+
+
 def calculate_iou(box1, box2):
     """
     Calculate the Intersection over Union (IoU) of two bounding boxes.
@@ -80,7 +82,25 @@ def grouping(current_dets, max_distance=100):
     
     merged_bboxes = [merge_bboxes(group) for group in groups]
     
-    return merged_bboxes
+    return merged_bboxes,groups
+
+def check_surrounding(newdets,ldet, max_distance=300):
+    if len(newdets) == 0:
+        return None
+    center1 = calculate_center(ldet.bbox)
+    center2 = calculate_center(newdets[0].bbox)
+    min_distance= calculate_distance(center1, center2)
+    nearest_det_index=None
+    for i in range(len(newdets)):
+        ndet=newdets[i]
+        center2 = calculate_center(ndet.bbox)
+        distance = calculate_distance(center1, center2)
+        if distance <= max_distance and distance <= min_distance:
+            min_distance = distance
+            nearest_det_index = i
+    return nearest_det_index
+    
+
 
 # Detection:id,bb_left,bb_top,bb_width,bb_height,conf,det_class
 class Detection:
@@ -144,7 +164,7 @@ class Detector:
         frame = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  
 
         # RTDETR 
-        results = self.model(frame,imgsz = 1088)
+        results = self.model(frame,imgsz = 1088, verbose=False) 
 
         det_id = 0
         for box in results[0].boxes:
@@ -179,7 +199,10 @@ def image_process_main(shared):
     number = -1
     class_list = [0,2,5,7]
     mega_lost_dets=[]
-    threshold_time=0.5
+    dets_timers={}
+    dets_ids={}
+    threshold_time=0.2
+    id_counter=0
     arg_a=100.0
     arg_wx=5
     arg_wy=5
@@ -221,10 +244,11 @@ def image_process_main(shared):
     new_dets = []
     current_dets = []
     groups = []
+    merged = []
     while True:
         start_time=time.time()
         
-        detections_list=[]
+        detections_list=[[],[]]
         ret, frame_img = cap.read()
         if not ret:  
             break
@@ -239,36 +263,45 @@ def image_process_main(shared):
             current_dets = [det for det in dets if det.track_id not in [det.track_id for det in new_dets]]
 
             for det in lost_dets:
-                mega_lost_dets.append((det,frame_id))
-                print(f"detection lost:{det.track_id}")
+                if det.track_id!=0:
+                    mega_lost_dets.append((det,frame_id))
+                    print(f"detection lost:{det.track_id}")
             for ndet in new_dets:
+                if ndet.track_id==0:
+                    new_dets.remove(ndet)
                 print(f"new detection:{ndet.track_id}")
             for ldet in mega_lost_dets:
-                if frame_id - ldet[1] > 5: 
+                if frame_id - ldet[1] > 10 : 
                     mega_lost_dets.remove(ldet)
+                    continue
                 else:
                     for ndet in new_dets:
                         if calculate_iou(ldet[0].bbox,ndet.bbox) > 0.5:
                             print(f"ldet:{ldet[0].track_id} ndet:{ndet.track_id}")
                             ndet.track_id = ldet[0].track_id
                             mega_lost_dets.remove(ldet)
+                            new_dets.remove(ndet)
                             
                             break
-           
+                    nearest_det_index = check_surrounding(new_dets,ldet[0])
+                    if nearest_det_index is not None:
+                        ndet = new_dets[nearest_det_index]
+                        print(f"nearest_det:{ndet.track_id}")
+                        ndet.track_id = ldet[0].track_id
+                        mega_lost_dets.remove(ldet)
+                        new_dets.remove(ndet)    
+                        
             current_dets.extend(new_dets)
-            groups = grouping(current_dets)
+            merged,groups = grouping(current_dets)
           
                         
         '''     
-        elif time.time()- valid_dets[det.track_id] >=threshold_time :
+        elif time.time()- dets_timers[det.track_id] >=threshold_time :
                 detections_list.append(det.to_dict())
-        #shared.update_detections(detections_list,frame_img)
+        
         '''
         
-        elapsed_time= time.time() -start_time
-        sleep_time= frame_time - elapsed_time
-        if sleep_time > 0:
-            time.sleep(sleep_time)
+        
         """
         for det in new_dets:
             print(det.track_id)
@@ -285,30 +318,56 @@ def image_process_main(shared):
                 # 画出检测框的id
                 cv2.putText(frame_img, str(det.track_id), (int(det.bb_left), int(det.bb_top)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         """
+        
+        
+        #shared.update_detections(detections_list,frame_img)
+        for i in range(len(merged)):
+            group=merged[i]
+            id = group[0]
+            
+            if id not in dets_timers:
+                
+                dets_timers[id]=time.time()
+                continue
+            
+            elif time.time()- dets_timers[id] >=threshold_time :
+                detections_list[0].append(group)
+                detections_list[1].append(len(groups[i]))
+                
 
- 
-
-        for group in groups:
+        for i in range(len(detections_list[0])):
+            group=detections_list[0][i]
             id = group[0]
             x_min = group[1]
             y_min = group[2]
             x_max = group[3]
             y_max = group[4]
 
-            if id > 0:
-                cv2.rectangle(frame_img, (int(x_min), int(y_min)), (int(x_max), int(y_max)), (0, 255, 0), 2)
-                cv2.putText(frame_img, str(id), (int(x_min), int(y_min)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+            if id not in dets_ids:
+                dets_ids[id]=id_counter
+                id_counter+=1
 
-  
-
+            if id > 0 :
+                if detections_list[1][i] > 1:
+                    cv2.rectangle(frame_img, (int(x_min), int(y_min)), (int(x_max), int(y_max)), (255, 0, 0), 2)
+                    cv2.putText(frame_img, str(dets_ids[id]), (int(x_min), int(y_min)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                else:
+                    cv2.rectangle(frame_img, (int(x_min), int(y_min)), (int(x_max), int(y_max)), (0, 255, 0), 2)
+                    cv2.putText(frame_img, str(dets_ids[id]), (int(x_min), int(y_min)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+            
+        
         frame_id += 1
         
+        #shared.update_detections(detections_list,frame_img)
 
         cv2.imshow("demo", frame_img)
         if cv2.waitKey(1) & 0xFF== ord('q'):
             break
         
-
+        elapsed_time= time.time() -start_time
+        sleep_time= frame_time - elapsed_time
+        if sleep_time > 0:
+            time.sleep(sleep_time)
         
 
 
