@@ -195,7 +195,7 @@ class Detector:
         return dets
     
 
-def image_process_main(shared):
+def image_process_main(shared, isTest):
     number = -1
     class_list = [0,2,5,7]
     mega_lost_dets=[]
@@ -212,14 +212,12 @@ def image_process_main(shared):
     arg_conf_thresh=0.01
     #video_path="/home/master/Downloads/footage.mp4"
     #video_path="/home/master/Desktop/UAV-control-software/image_processing/demo/demo.mp4"
-    cap = cv2.VideoCapture("/home/master/Desktop/UAV-control-software/son.mp4")
+    if isTest:
+        cap = shared.camera_image
+    else:
+        cap = cv2.VideoCapture("/home/master/Desktop/UAV-control-software/son.mp4")
     # fps
     fps = cap.get(cv2.CAP_PROP_FPS)
-
-   
-    print("hi")
-    
-    
 
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))

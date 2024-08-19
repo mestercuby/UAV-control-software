@@ -1,8 +1,9 @@
 import threading
-from pymavlink import mavutil
 import time
 import math
 
+from pymavlink import mavutil
+import pymavlink.dialects.v20.all as dialect
 
 class ConnectionStrings:
     SITL = 'udp:127.0.0.1:14550'
@@ -57,7 +58,7 @@ class Vehicle:
 
     def update_telemetry_data(self):
 
-        type_list = ['ATTITUDE', 'GLOBAL_POSITION_INT', 'VFR_HUD', 'SYS_STATUS', 'HEARTBEAT']
+        type_list = ['ATTITUDE', 'GLOBAL_POSITION_INT', 'VFR_HUD', 'SYS_STATUS', 'HEARTBEAT', 'GIMBAL_MANAGER_INFORMATION', 'GIMBAL_MANAGER_STATUS']
 
         while True:
             # Get the latest message from the vehicle
@@ -82,6 +83,9 @@ class Vehicle:
                     self.battery_remaining = msg.battery_remaining
                 if msg.get_type() == 'HEARTBEAT':
                     self.flight_mode = mavutil.mode_string_v10(msg)
+                if msg.get_type() == 'GIMBAL_MANAGER_INFORMATION' or msg.get_type() == 'GIMBAL_MANAGER_STATUS':
+                    print(msg)
+
             time.sleep(0.02)
 
     def set_flight_mode(self, mode):
@@ -103,7 +107,7 @@ class Vehicle:
         self.connection.mav.command_long_send(
             self.connection.target_system,
             self.connection.target_component,
-            mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+            dialect.MAV_CMD_NAV_TAKEOFF,
             0,
             0, 0, 0, 0,
             0, 0, target_altitude)
@@ -116,9 +120,9 @@ class Vehicle:
         self.connection.mav.command_int_send(
             self.connection.target_system,
             self.connection.target_component,
-            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+            dialect.MAV_FRAME_GLOBAL_RELATIVE_ALT,
             # “frame” = 0 or 3 for alt-above-sea-level, 6 for alt-above-home or 11 for alt-above-terrain
-            mavutil.mavlink.MAV_CMD_DO_REPOSITION,
+            dialect.MAV_CMD_DO_REPOSITION,
             0,  # Current
             0,  # Autocontinue
             speed,
@@ -126,6 +130,41 @@ class Vehicle:
             lat,
             lng,
             alt
+        )
+
+    def set_roi(self, lat, lng, alt):
+        # Send command to move to the specified latitude, longitude, and current altitude
+        self.connection.mav.command_long_send(
+            self.connection.target_system,
+            self.connection.target_component,
+            dialect.MAV_CMD_DO_SET_ROI_LOCATION,
+            0,
+            0, 0, 0, 0,
+            lat, lng, alt)
+
+    def set_gimbal_angle(self, pitch, yaw):
+        # Send command to move to the specified latitude, longitude, and current altitude
+        self.connection.mav.command_long_send(
+            self.connection.target_system,
+            self.connection.target_component,
+            dialect.MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW,
+            0,
+            pitch,
+            yaw,
+            0, 0,
+            2, 0, 0)
+
+
+
+    def set_gimbal_mode(self):
+        # Send the attitude command
+        self.connection.mav.gimbal_manager_set_attitude_send(
+            self.connection.target_system,
+            self.connection.target_component,
+            dialect.GIMBAL_MANAGER_FLAGS_RC_MIXED,  # Flags
+            0,
+            [1,0,0,0],
+            0, 0, 0  # Pitch, yaw, roll rate (set to 0 for static attitude)
         )
 
     def scan_mission(self, point1, point2):
@@ -161,7 +200,9 @@ def get_point_at_distance(self, d, R=6371):
 if __name__ == '__main__':
     vehicle = Vehicle()
     oldtime = time.time()
+    # vehicle.set_gimbal_mode()
+    # vehicle.set_gimbal_angle(45, 30)
     while True:
-        print(time.time() - oldtime)
+        # print(time.time() - oldtime)
         oldtime = time.time()
         time.sleep(0.1)
