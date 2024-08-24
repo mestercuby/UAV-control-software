@@ -29,6 +29,10 @@ class Vehicle:
         self.battery_remaining = 0
         self.flight_mode = None
 
+        self.gimbal_yaw_vehicle = 0
+        self.gimbal_yaw_earth = 0
+        self.gimbal_flag=-1
+
         # Set default values for variables
         self.connection = None
         self.baudrate = baudrate  # 115200 on USB or 57600 on Radio/Telemetry
@@ -86,7 +90,27 @@ class Vehicle:
                 if msg.get_type() == 'GIMBAL_MANAGER_INFORMATION' or msg.get_type() == 'GIMBAL_MANAGER_STATUS':
                     print(msg)
 
+                if msg.get_type() == 'GIMBAL_DEVICE_ATTITUDE_STATUS':
+
+                    yaw=msg.delta_yaw
+
+                    flags = msg.flags
+                    if (flags & dialect.GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME):
+                        self.gimbal_yaw_vehicle = yaw
+                        self.gimbal_flag=0
+
+                    elif (flags & dialect.GIMBAL_DEVICE_FLAGS_YAW_IN_EARTH_FRAME):
+                        self.gimbal_yaw_earth = yaw
+                        self.gimbal_flag=1
+                    elif(flags & dialect.GIMBAL_DEVICE_FLAGS_YAW_LOCK):
+                        self.gimbal_yaw_earth = yaw
+                        self.gimbal_flag=0
+                    else:
+                        self.gimbal_yaw_earth = yaw
+                        self.gimbal_flag=1
+
             time.sleep(0.02)
+
 
     def set_flight_mode(self, mode):
         self.connection.set_mode(mode)
@@ -185,9 +209,17 @@ def get_point_at_distance(self, d, R=6371):
 
     Returns new lat/lon coordinate {d}km from initial, in degrees
     """
+
     lat1 = math.radians(self.lat)
     lon1 = math.radians(self.lon)
-    a = math.radians(self.heading)
+    #a = math.radians(self.heading)
+
+    if self.gimbal_flag==0:
+        a = math.radians(self.heading) + self.gimbal_yaw_vehicle
+    
+    elif self.gimbal_flag==1:
+        a = self.gimbal_yaw_earth
+
     lat2 = math.asin(math.sin(lat1) * math.cos(d / R) + math.cos(lat1) * math.sin(d / R) * math.cos(a))
     lon2 = lon1 + math.atan2(
         math.sin(a) * math.sin(d / R) * math.cos(lat1),
