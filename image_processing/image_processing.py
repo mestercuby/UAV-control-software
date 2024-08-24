@@ -55,7 +55,7 @@ def merge_bboxes(group):
     conf = max(det.conf for det in group)
 
     #return [id, x_min, y_min, x_max, y_max]
-    return Detection(id, x_min, y_min, x_max - x_min, y_max - y_min, conf)
+    return Detection(id, x_min, y_min, x_max - x_min, y_max - y_min, [x_min, y_min, x_max, y_max], conf)
 
 def grouping(current_dets, max_distance=100):
     groups = []
@@ -108,13 +108,13 @@ def check_surrounding(newdets,ldet, max_distance=300):
 # Detection:id,bb_left,bb_top,bb_width,bb_height, bbox,conf,det_class,track_id,y,R
 class Detection:
 
-    def __init__(self, id, bb_left = 0, bb_top = 0, bb_width = 0, bb_height = 0, conf = 0, det_class = 0):
+    def __init__(self, id, bb_left = 0, bb_top = 0, bb_width = 0, bb_height = 0, bbox=[], conf = 0, det_class = 0):
         self.id = id
         self.bb_left = bb_left
         self.bb_top = bb_top
         self.bb_width = bb_width
         self.bb_height = bb_height
-        self.bbox=[]
+        self.bbox=bbox
         self.conf = conf
         self.det_class = det_class
         self.track_id = 0
