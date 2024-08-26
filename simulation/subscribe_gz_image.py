@@ -46,18 +46,20 @@ class Image_Subscriber(Node):
         self.subscription  # prevent unused variable warning
 
     def image_callback(self, msg):
-        print("Image received!")
+
         try:
             # Convert your ROS Image message to OpenCV2
             cv2_img = bridge.imgmsg_to_cv2(msg, "bgr8")
         except CvBridgeError as e:
             print(e)
         else:
+            print("Image is received!")
             # Save your OpenCV2 image as a jpg
-            if self.communication == None:
-                cv2.imshow("image", cv2_img)
+            if self.communication is None:
+                cv2.imshow("camera", cv2_img)
             else:
-                self.communication.camera_image = cv2_img
+                self.communication.update_camera_image(cv2_img)
+
             # cv2.imwrite(f"{self.path}/camera_image{self.i}.jpg", cv2_img)
             # self.i = self.i + 1
         cv2.waitKey(1)
@@ -77,9 +79,9 @@ class ImageSubscriberThread(threading.Thread):
         rclpy.shutdown()
 
 
-def main():
+def start_listener(communication):
     rclpy.init()
-    minimal_subscriber = Image_Subscriber(None)
+    minimal_subscriber = Image_Subscriber(communication)
     rclpy.spin(minimal_subscriber)
     print("Listener is stopped!")
     minimal_subscriber.destroy_node()
@@ -87,4 +89,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    start_listener(None)

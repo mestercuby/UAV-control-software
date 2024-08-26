@@ -5,7 +5,7 @@ import numpy as np
 from lap import lapjv
 
 
-from .kalman import KalmanTracker,TrackStatus
+from .kalman import KalmanTracker, TrackStatus
 
 
 def linear_assignment(cost_matrix, thresh):
