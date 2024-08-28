@@ -213,6 +213,7 @@ def image_process_main(shared, isTest):
     arg_cdt=10.0
     arg_high_score=0.5
     arg_conf_thresh=0.01
+    flag=False
     #video_path="/home/master/Downloads/footage.mp4"
     #video_path="/home/master/Desktop/UAV-control-software/image_processing/demo/demo.mp4"
     if isTest:
@@ -259,6 +260,8 @@ def image_process_main(shared, isTest):
         
         if frame_id > 2:
 
+            flag = True
+
             lost_dets = [det for det in old_dets if det.track_id not in [det.track_id for det in dets]]
             new_dets = [det for det in dets if det.track_id not in [det.track_id for det in old_dets]]
             current_dets = [det for det in dets if det.track_id not in [det.track_id for det in new_dets]]
@@ -282,15 +285,21 @@ def image_process_main(shared, isTest):
                             ndet.track_id = ldet[0].track_id
                             mega_lost_dets.remove(ldet)
                             new_dets.remove(ndet)
+
+                            ####
+                            current_dets.append(ndet)
+                            flag = False
+                            ####
                             
                             break
-                    nearest_det_index = check_surrounding(new_dets,ldet[0])
-                    if nearest_det_index is not None:
-                        ndet = new_dets[nearest_det_index]
-                        print(f"nearest_det:{ndet.track_id}")
-                        ndet.track_id = ldet[0].track_id
-                        mega_lost_dets.remove(ldet)
-                        new_dets.remove(ndet)    
+                    if flag:
+                        nearest_det_index = check_surrounding(new_dets,ldet[0])
+                        if nearest_det_index is not None:
+                            ndet = new_dets[nearest_det_index]
+                            print(f"nearest_det:{ndet.track_id}, lost:{ldet[0].track_id}")
+                            ndet.track_id = ldet[0].track_id
+                            mega_lost_dets.remove(ldet)
+                            new_dets.remove(ndet)    
                         
             current_dets.extend(new_dets)
             merged,groups = grouping(current_dets)
