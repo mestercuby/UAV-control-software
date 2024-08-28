@@ -8,33 +8,41 @@ from simulation.subscribe_gz_image import ImageSubscriberThread
 
 
 def main(args):
+    print(args)
     fps = 30
     shared = Communication(fps)
+
     if args.isTest == 1:
         ImageSubscriberThread(shared).start()
 
     server = VideoServerThread(ip=args.ip, shared=shared)
 
-    image_process = threading.Thread(target=image_process_main, args=(shared,args.isTest))
+    image_process = threading.Thread(target=image_process_main, args=(shared, args.isTest))
 
-    #server.start()
+    server.start()
     image_process.start()
 
+    print("Waiting for connection...")
+
     while server.client_socket == None:
-        time.sleep(0.1)
         print("haydi")
+        time.sleep(0.1)
+    print("Connection established!")
+
     handle_message_thread = HandleMessageThread(server.client_socket, shared)
     handle_message_thread.start()
+
+
 
     while True:
         time.sleep(0.1)
         print(shared.mission, shared.argument)
-    #image_process_main(shared)
+    # image_process_main(shared)
 
 
 parser = argparse.ArgumentParser(description='Process some arguments.')
 parser.add_argument('--ip', type=str, default="127.0.0.1", help='ip address')
-parser.add_argument('--isTest', type=bool, default=True, help='do you use simulation or real uav')
+parser.add_argument('--isTest', type=bool, default=True, help='do you use simulation or real camera')
 
 """
 parser.add_argument('--cam_para', type=str, default = "/home/master/Desktop//Otonom/image_processing/demo/cam_para.txt", help='camera parameter file name')

@@ -1,15 +1,19 @@
 import time
 
+import numpy
+
 
 class Communication:
     """
     This class is used to store the shared data between the main program and the other modules.
     """
+
     def __init__(self, fps):
         self.last_update_time = None
         self.error_msg = ""
         self.fps = fps
-        #CV to server
+
+        # CV to server
         self.detections = None
         self.frame = None
 
@@ -17,23 +21,29 @@ class Communication:
         self.obj_detected = False  ### GÖZLEM İÇİN
         self.location = (-1, -1)
 
-        #server to main
+        # server to main
         self.mission = None
         self.argument = None
 
-        #otnomi to server
+        # otnomi to server
         self.mission_finished = True
-        #otonomi to CV
+        # otonomi to CV
         self.lat = None
         self.long = None
         self.lidar_height = None
         self.uav_tilt = None
         self.gimbal_tilt = None
-        #otnomi internal
+        # otonomi internal
         self.wanted_height = None
         self.homep = None
-        #server to CV
+        # server to CV
         self.track_target = None
+
+        # image from simulation
+        self.camera_image = numpy.zeros((480, 640, 3), numpy.uint8)
+
+    def update_camera_image(self, image):
+        self.camera_image = numpy.copy(image)
 
     def update_detections(self, new_detections, new_frame):
         self.detections = new_detections
