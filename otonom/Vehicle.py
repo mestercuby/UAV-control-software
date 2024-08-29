@@ -1,9 +1,11 @@
 import threading
 import time
-import math
 
 from pymavlink import mavutil
 import pymavlink.dialects.v20.all as dialect
+
+from otonom.Tracker import Tracker
+
 
 class ConnectionStrings:
     SITL = 'udp:127.0.0.1:14550'
@@ -13,7 +15,7 @@ class ConnectionStrings:
 
 class Vehicle:
 
-    def __init__(self, connection_string=ConnectionStrings.SITL, baudrate=115200):
+    def __init__(self, communication=None):
         # Telemetry data
         self.latitude = 0
         self.longitude = 0
@@ -31,22 +33,21 @@ class Vehicle:
 
         self.gimbal_yaw_vehicle = 0
         self.gimbal_yaw_earth = 0
-        self.gimbal_flag=-1
+        self.gimbal_flag = -1
 
         # Set default values for variables
+        self.communication = communication  # Communication with other components
         self.connection = None
-        self.baudrate = baudrate  # 115200 on USB or 57600 on Radio/Telemetry
-        self.connection_string = connection_string  # for SITL
 
         # Connect to the vehicle
         self.connect_to_vehicle()
 
-    def connect_to_vehicle(self):
+    def connect_to_vehicle(self, connection_string=ConnectionStrings.SITL, baudrate=115200):
         timeout = 10  # seconds
 
         try:
-            print(f"Connecting to a vehicle on: {self.connection_string}")
-            self.connection = mavutil.mavlink_connection(self.connection_string, baud=self.baudrate, autoreconnect=True,
+            print(f"Connecting to a vehicle on: {connection_string}")
+            self.connection = mavutil.mavlink_connection(connection_string, baud=baudrate, autoreconnect=True,
                                                          timeout=timeout)
 
             print("Waiting for heartbeat...")
@@ -62,7 +63,7 @@ class Vehicle:
 
     def update_telemetry_data(self):
 
-        type_list = ['ATTITUDE', 'GLOBAL_POSITION_INT', 'VFR_HUD', 'SYS_STATUS', 'HEARTBEAT', 'GIMBAL_MANAGER_INFORMATION', 'GIMBAL_MANAGER_STATUS']
+        type_list = ['ATTITUDE', 'GLOBAL_POSITION_INT', 'VFR_HUD', 'SYS_STATUS', 'HEARTBEAT', 'GIMBAL_DEVICE_ATTITUDE_STATUS']
 
         while True:
             # Get the latest message from the vehicle
@@ -87,30 +88,11 @@ class Vehicle:
                     self.battery_remaining = msg.battery_remaining
                 if msg.get_type() == 'HEARTBEAT':
                     self.flight_mode = mavutil.mode_string_v10(msg)
-                if msg.get_type() == 'GIMBAL_MANAGER_INFORMATION' or msg.get_type() == 'GIMBAL_MANAGER_STATUS':
-                    print(msg)
 
                 if msg.get_type() == 'GIMBAL_DEVICE_ATTITUDE_STATUS':
-
-                    yaw=msg.delta_yaw
-
-                    flags = msg.flags
-                    if (flags & dialect.GIMBAL_DEVICE_FLAGS_YAW_IN_VEHICLE_FRAME):
-                        self.gimbal_yaw_vehicle = yaw
-                        self.gimbal_flag=0
-
-                    elif (flags & dialect.GIMBAL_DEVICE_FLAGS_YAW_IN_EARTH_FRAME):
-                        self.gimbal_yaw_earth = yaw
-                        self.gimbal_flag=1
-                    elif(flags & dialect.GIMBAL_DEVICE_FLAGS_YAW_LOCK):
-                        self.gimbal_yaw_earth = yaw
-                        self.gimbal_flag=0
-                    else:
-                        self.gimbal_yaw_earth = yaw
-                        self.gimbal_flag=1
+                    print(msg)
 
             time.sleep(0.02)
-
 
     def set_flight_mode(self, mode):
         self.connection.set_mode(mode)
@@ -175,65 +157,33 @@ class Vehicle:
             0,
             pitch,
             yaw,
-            0, 0,
+            2, 2,
             2, 0, 0)
-
-
 
     def set_gimbal_mode(self):
         # Send the attitude command
-        self.connection.mav.gimbal_manager_set_attitude_send(
+        self.connection.mav.command_long_send(
             self.connection.target_system,
             self.connection.target_component,
-            dialect.GIMBAL_MANAGER_FLAGS_RC_MIXED,  # Flags
+            dialect.MAV_CMD_DO_MOUNT_CONTROL,
             0,
-            [1,0,0,0],
-            0, 0, 0  # Pitch, yaw, roll rate (set to 0 for static attitude)
+            0, 0, 0, 0, 0, 0,
+            dialect.MAV_MOUNT_MODE_MAVLINK_TARGETING  # Mode
         )
 
-    def scan_mission(self, point1, point2):
-        pass
-
     def tracking_mission(self, target_id):
-        pass
-
-
-### TESPİT EDİLEN HEDEFLERİN UZAKLIĞINI HESAPLAYAN FONKSİYON BU FONKSİYON BAŞKA BİR YERDE KULLANILACAKTIR ###
-def get_point_at_distance(self, d, R=6371):
-    """
-    lat: initial latitude, in degrees
-    lon: initial longitude, in degrees
-    d: target distance from initial
-    bearing: (true) heading in degrees
-    R: optional radius of sphere, defaults to mean radius of earth
-
-    Returns new lat/lon coordinate {d}km from initial, in degrees
-    """
-
-    lat1 = math.radians(self.lat)
-    lon1 = math.radians(self.lon)
-    #a = math.radians(self.heading)
-
-    if self.gimbal_flag==0:
-        a = math.radians(self.heading) + self.gimbal_yaw_vehicle
-    
-    elif self.gimbal_flag==1:
-        a = self.gimbal_yaw_earth
-
-    lat2 = math.asin(math.sin(lat1) * math.cos(d / R) + math.cos(lat1) * math.sin(d / R) * math.cos(a))
-    lon2 = lon1 + math.atan2(
-        math.sin(a) * math.sin(d / R) * math.cos(lat1),
-        math.cos(d / R) - math.sin(lat1) * math.sin(lat2)
-    )
-    return math.degrees(lat2), math.degrees(lon2)
+        tracker = Tracker(self, self.communication)
+        print("tracking:", target_id)
+        threading.Thread(target=tracker.track).start()
 
 
 # TEST
 if __name__ == '__main__':
     vehicle = Vehicle()
     oldtime = time.time()
-    # vehicle.set_gimbal_mode()
-    # vehicle.set_gimbal_angle(45, 30)
+    vehicle.set_gimbal_mode()
+    time.sleep(1)
+    vehicle.set_gimbal_angle(45, 30)
     while True:
         # print(time.time() - oldtime)
         oldtime = time.time()
