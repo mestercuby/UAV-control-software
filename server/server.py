@@ -60,10 +60,10 @@ class VideoServerThread(threading.Thread):
         
         self.client_socket, addr = self.socket.accept()
         print(f"[NEW CONNECTION] {addr} connected.")
-
+        
         while True:
             start_time=time.time()
-            print('send')
+            #print('sent')
             detections,frame,last_update=self.shared.get_detections()
             
             if last_update and time.time() - last_update > self.timeout_seconds:

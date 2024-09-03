@@ -53,7 +53,7 @@ class Image_Subscriber(Node):
         except CvBridgeError as e:
             print(e)
         else:
-            print("Image is received!")
+            #print("Image is received!")
             # Save your OpenCV2 image as a jpg
             if self.communication is None:
                 cv2.imshow("camera", cv2_img)

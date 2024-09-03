@@ -140,6 +140,7 @@ class Detection:
             'bb_top': int(self.bb_top),
             'bb_width': int(self.bb_width),
             'bb_height': int(self.bb_height),
+            'bbox' : [float(box) for box in self.bbox],
             'conf': float(self.conf),
             'det_class': int(self.det_class),
             'track_id': int(self.track_id),
@@ -216,14 +217,17 @@ def image_process_main(shared, isTest):
     #video_path="/home/master/Downloads/footage.mp4"
     #video_path="/home/master/Desktop/UAV-control-software/image_processing/demo/demo.mp4"
     if isTest:
-        cap = shared.camera_image
+        time.sleep(1)
+
+        fps = 30
+        width = 640
+        height = 480
     else:
         cap = cv2.VideoCapture(0)
-    # fps
-    fps = cap.get(cv2.CAP_PROP_FPS)
-
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        # fps
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     video_out = cv2.VideoWriter('son1.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
 
@@ -249,7 +253,11 @@ def image_process_main(shared, isTest):
         start_time = time.time()
 
         detections_list = [[], []]
-        ret, frame_img = cap.read()
+        if isTest:
+            ret = True
+            frame_img = shared.camera_image
+        else:
+            ret, frame_img = cap.read()
         if not ret:
             break
 
@@ -326,6 +334,9 @@ def image_process_main(shared, isTest):
         """
 
         #shared.update_detections(detections_list,frame_img)
+        if len(merged) == 0:
+            shared.update_target(None)
+            
         for i in range(len(merged)):
             group = merged[i]
             id = group.id
@@ -347,8 +358,7 @@ def image_process_main(shared, isTest):
             x_max = group.bb_left + group.bb_width
             y_max = group.bb_top + group.bb_height
 
-            if id == 1:
-                shared.track_target = det
+            shared.update_target(group)
 
             if id not in dets_ids:
                 dets_ids[id] = id_counter
@@ -365,10 +375,13 @@ def image_process_main(shared, isTest):
                                 (255, 0, 0), 2)
 
         frame_id += 1
+        final_dets=[det.to_dict() for det in detections_list[0]]
+      
+        shared.update_detections(final_dets, frame_img)
 
-        shared.update_detections(detections_list[0], frame_img)
+        if not isTest:
+            cv2.imshow("demo", frame_img)
 
-        cv2.imshow("demo", frame_img)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 

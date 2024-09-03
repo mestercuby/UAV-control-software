@@ -6,8 +6,11 @@ from otonom.Vehicle import Vehicle
 from server.server import VideoServerThread, HandleMessageThread
 from image_processing.image_processing import image_process_main
 from Communication import Communication
-# from simulation.subscribe_gz_image import ImageSubscriberThread
-
+from simulation.subscribe_gz_image import ImageSubscriberThread
+def input_thread():
+    if input() == "q":
+        print("Exiting...")
+        exit()
 
 def main(args):
     print(args)
@@ -16,37 +19,41 @@ def main(args):
     shared = Communication(fps)
     vehicle = Vehicle(shared)
     vehicle.connect_to_vehicle()
-    vehicle.tracking_mission(1)
 
-    # if args.isTest == 1:
-    #     ImageSubscriberThread(shared).start()
+    if args.isTest == 1:
+        ImageSubscriberThread(shared).start()
 
+    in_thread = threading.Thread(target=input_thread)
+    in_thread.start()
     server = VideoServerThread(ip=args.ip, shared=shared)
 
     image_process = threading.Thread(target=image_process_main, args=(shared, args.isTest))
-
-    server.start()
     image_process.start()
+    server.start()
+   
+    vehicle.tracking_mission(1)
 
     print("Waiting for connection...")
-
+    '''
     while server.client_socket == None:
-        print("haydi")
+        #print("haydi")
         time.sleep(0.1)
+    '''
     print("Connection established!")
 
     handle_message_thread = HandleMessageThread(server.client_socket, shared)
     handle_message_thread.start()
-
+    '''
     while True:
         time.sleep(0.1)
         print(shared.mission, shared.argument)
+    '''
     # image_process_main(shared)
 
 
 parser = argparse.ArgumentParser(description='Process some arguments.')
 parser.add_argument('--ip', type=str, default="127.0.0.1", help='ip address')
-parser.add_argument('--isTest', type=bool, default=False, help='do you use simulation or real camera')
+parser.add_argument('--isTest', type=bool, default=True, help='do you use simulation or real camera')
 
 """
 parser.add_argument('--cam_para', type=str, default = "/home/master/Desktop//Otonom/image_processing/demo/cam_para.txt", help='camera parameter file name')

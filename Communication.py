@@ -91,3 +91,9 @@ class Communication:
 
     def get_error_msg(self):
         return self.error_msg
+
+    def get_target(self):
+        return self.track_target
+    
+    def update_target(self, target):
+        self.track_target = target

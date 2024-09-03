@@ -8,7 +8,7 @@ from otonom.Tracker import Tracker
 
 
 class ConnectionStrings:
-    SITL = 'udp:127.0.0.1:14550'
+    SITL = 'udp:127.0.0.1:14551'
     USB = '/dev/ttyACM0'
     TELEMETRY = '/dev/ttyUSB0'
 
@@ -31,7 +31,7 @@ class Vehicle:
         self.battery_remaining = 0
         self.flight_mode = None
 
-        self.gimbal_yaw_vehicle = 0
+        self.gimbal_yaw_vehicle = 60
         self.gimbal_yaw_earth = 0
         self.gimbal_flag = -1
 
@@ -71,9 +71,9 @@ class Vehicle:
             if msg is not None:
                 # Update indicators
                 if msg.get_type() == 'GLOBAL_POSITION_INT':
-                    self.latitude = msg.lat
-                    self.longitude = msg.lon
-                    self.altitude = msg.alt
+                    self.latitude = msg.lat / 1e7
+                    self.longitude = msg.lon / 1e7
+                    self.altitude = msg.relative_alt / 1000
                 if msg.get_type() == 'VFR_HUD':
                     self.airspeed = msg.airspeed
                     self.groundspeed = msg.groundspeed
@@ -118,9 +118,10 @@ class Vehicle:
             0, 0, 0, 0,
             0, 0, target_altitude)
 
-    def move_to(self, lat, lng, speed=10):
-        lat = lat * 1e7
-        lng = lng * 1e7
+    def move_to(self, lat, lng, speed=-1):
+        
+        lat = int(float(lat * 1e7))
+        lng = int(float(lng * 1e7))
         alt = self.altitude
         # Send command to move to the specified latitude, longitude, and current altitude
         self.connection.mav.command_int_send(
