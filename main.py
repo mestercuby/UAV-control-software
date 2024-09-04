@@ -1,3 +1,4 @@
+import socket
 import threading
 import argparse
 import time
@@ -7,10 +8,7 @@ from server.server import VideoServerThread, HandleMessageThread
 from image_processing.image_processing import image_process_main
 from Communication import Communication
 from simulation.subscribe_gz_image import ImageSubscriberThread
-def input_thread():
-    if input() == "q":
-        print("Exiting...")
-        exit()
+
 
 def main(args):
     print(args)
@@ -23,8 +21,6 @@ def main(args):
     if args.isTest == 1:
         ImageSubscriberThread(shared).start()
 
-    in_thread = threading.Thread(target=input_thread)
-    in_thread.start()
     server = VideoServerThread(ip=args.ip, shared=shared)
 
     image_process = threading.Thread(target=image_process_main, args=(shared, args.isTest))
@@ -33,22 +29,25 @@ def main(args):
    
     vehicle.tracking_mission(1)
 
-    print("Waiting for connection...")
-    '''
-    while server.client_socket == None:
-        #print("haydi")
-        time.sleep(0.1)
-    '''
-    print("Connection established!")
+    print("Waiting for wifi connection...")
 
-    handle_message_thread = HandleMessageThread(server.client_socket, shared)
-    handle_message_thread.start()
-    '''
-    while True:
-        time.sleep(0.1)
-        print(shared.mission, shared.argument)
-    '''
-    # image_process_main(shared)
+    try:
+        while server.client_socket == None:
+            time.sleep(0.1)
+
+        print("Wifi connection established!")
+
+        handle_message_thread = HandleMessageThread(server.client_socket, shared)
+        handle_message_thread.start()
+
+        while True:
+            time.sleep(1)
+
+    except KeyboardInterrupt:
+        print("Interrupted! Closing sockets and exiting...")
+        if server.client_socket:
+            server.client_socket.shutdown(socket.SHUT_RDWR)
+        server.socket.shutdown(socket.SHUT_RDWR)
 
 
 parser = argparse.ArgumentParser(description='Process some arguments.')

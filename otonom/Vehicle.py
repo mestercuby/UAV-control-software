@@ -1,3 +1,4 @@
+import math
 import threading
 import time
 
@@ -29,11 +30,9 @@ class Vehicle:
         self.yaw = 0
         self.battery_voltage = 0
         self.battery_remaining = 0
-        self.flight_mode = None
 
-        self.gimbal_yaw_vehicle = 60
-        self.gimbal_yaw_earth = 0
-        self.gimbal_flag = -1
+        self.gimbal_pitch = 0
+        self.gimbal_yaw = 0
 
         # Set default values for variables
         self.communication = communication  # Communication with other components
@@ -63,7 +62,8 @@ class Vehicle:
 
     def update_telemetry_data(self):
 
-        type_list = ['ATTITUDE', 'GLOBAL_POSITION_INT', 'VFR_HUD', 'SYS_STATUS', 'HEARTBEAT', 'GIMBAL_DEVICE_ATTITUDE_STATUS']
+        type_list = ['ATTITUDE', 'GLOBAL_POSITION_INT', 'VFR_HUD', 'SYS_STATUS',
+                     'GIMBAL_DEVICE_ATTITUDE_STATUS']
 
         while True:
             # Get the latest message from the vehicle
@@ -71,9 +71,9 @@ class Vehicle:
             if msg is not None:
                 # Update indicators
                 if msg.get_type() == 'GLOBAL_POSITION_INT':
-                    self.latitude = msg.lat / 1e7
-                    self.longitude = msg.lon / 1e7
-                    self.altitude = msg.relative_alt / 1000
+                    self.latitude = msg.lat
+                    self.longitude = msg.lon
+                    self.altitude = msg.alt
                 if msg.get_type() == 'VFR_HUD':
                     self.airspeed = msg.airspeed
                     self.groundspeed = msg.groundspeed
@@ -86,11 +86,9 @@ class Vehicle:
                 if msg.get_type() == 'SYS_STATUS':
                     self.battery_voltage = msg.voltage_battery
                     self.battery_remaining = msg.battery_remaining
-                if msg.get_type() == 'HEARTBEAT':
-                    self.flight_mode = mavutil.mode_string_v10(msg)
 
                 if msg.get_type() == 'GIMBAL_DEVICE_ATTITUDE_STATUS':
-                    print(msg)
+                    roll, self.gimbal_pitch, self.gimbal_yaw = self.quaternion_to_euler_angles(msg.q)
 
             time.sleep(0.02)
 
@@ -119,9 +117,8 @@ class Vehicle:
             0, 0, target_altitude)
 
     def move_to(self, lat, lng, speed=-1):
-        
-        lat = int(float(lat * 1e7))
-        lng = int(float(lng * 1e7))
+        lat = lat * 1e7
+        lng = lng * 1e7
         alt = self.altitude
         # Send command to move to the specified latitude, longitude, and current altitude
         self.connection.mav.command_int_send(
@@ -139,15 +136,31 @@ class Vehicle:
             alt
         )
 
-    def set_roi(self, lat, lng, alt):
-        # Send command to move to the specified latitude, longitude, and current altitude
-        self.connection.mav.command_long_send(
+    def set_roi(self, lat, lng, alt=0):
+        self.connection.mav.command_int_send(
             self.connection.target_system,
             self.connection.target_component,
+            dialect.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+            # “frame” = 0 or 3 for alt-above-sea-level, 6 for alt-above-home or 11 for alt-above-terrain
             dialect.MAV_CMD_DO_SET_ROI_LOCATION,
+            0,  # Current
+            0,  # Autocontinue
+            0, 0, 0, 0,  # Params 2-4 (unused)
+            lat,
+            lng,
+            alt  # Altitude
+        )
+
+    def cancel_roi_mode(self):
+        # Cancel the ROI mode.
+        self.connection.mav.command_int_send(
+            self.connection.target_system,
+            self.connection.target_component,
             0,
+            dialect.MAV_CMD_DO_SET_ROI_NONE,
+            0, 0,
             0, 0, 0, 0,
-            lat, lng, alt)
+            0, 0, 0)
 
     def set_gimbal_angle(self, pitch, yaw):
         # Send command to move to the specified latitude, longitude, and current altitude
@@ -158,18 +171,28 @@ class Vehicle:
             0,
             pitch,
             yaw,
-            2, 2,
-            2, 0, 0)
+            0, 0,
+            512, 0, 0)
 
     def set_gimbal_mode(self):
+        # Send command to move to the specified latitude, longitude, and current altitude
+        self.connection.mav.command_long_send(
+            self.connection.target_system,
+            self.connection.target_component,
+            dialect.MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW,
+            0, 0, 0, 0, 0,
+            dialect.GIMBAL_DEVICE_FLAGS_RETRACT,
+            0, 0)
+
+    def take_gimbal_control(self):
         # Send the attitude command
         self.connection.mav.command_long_send(
             self.connection.target_system,
             self.connection.target_component,
-            dialect.MAV_CMD_DO_MOUNT_CONTROL,
+            dialect.MAV_CMD_DO_GIMBAL_MANAGER_CONFIGURE,
             0,
-            0, 0, 0, 0, 0, 0,
-            dialect.MAV_MOUNT_MODE_MAVLINK_TARGETING  # Mode
+            -2,  # Take control
+            0, 0, 0, 0, 0, 0
         )
 
     def tracking_mission(self, target_id):
@@ -177,14 +200,44 @@ class Vehicle:
         print("tracking:", target_id)
         threading.Thread(target=tracker.track).start()
 
+    def quaternion_to_euler_angles(self, q):
+        """
+        Convert a quaternion to Euler angles (roll, pitch, yaw).
+
+        Args:
+            q: A quaternion with attributes w, x, y, z.
+
+        Returns:
+            roll, pitch, and yaw in radians.
+        """
+
+        # Roll (x-axis rotation)
+        sinr_cosp = 2 * (q[0] * q[1] + q[2] * q[3])
+        cosr_cosp = 1 - 2 * (q[1] * q[1] + q[2] * q[2])
+        roll = math.atan2(sinr_cosp, cosr_cosp)
+
+        # Pitch (y-axis rotation)
+        sinp = math.sqrt(1 + 2 * (q[0] * q[2] - q[1] * q[3]))
+        cosp = math.sqrt(1 - 2 * (q[0] * q[2] - q[1] * q[3]))
+        pitch = 2 * math.atan2(sinp, cosp) - math.pi / 2
+
+        # Yaw (z-axis rotation)
+        siny_cosp = 2 * (q[0] * q[3] + q[1] * q[2])
+        cosy_cosp = 1 - 2 * (q[2] * q[2] + q[3] * q[3])
+        yaw = math.atan2(siny_cosp, cosy_cosp)
+
+        return roll, pitch, yaw
+
 
 # TEST
 if __name__ == '__main__':
     vehicle = Vehicle()
     oldtime = time.time()
-    vehicle.set_gimbal_mode()
     time.sleep(1)
-    vehicle.set_gimbal_angle(45, 30)
+    # vehicle.take_gimbal_control()
+    # vehicle.set_gimbal_mode()
+    # vehicle.set_gimbal_angle(0, -90)
+    # vehicle.set_roi(40, 40)
     while True:
         # print(time.time() - oldtime)
         oldtime = time.time()

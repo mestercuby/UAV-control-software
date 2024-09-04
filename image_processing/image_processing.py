@@ -157,7 +157,7 @@ class Detector:
 
     def load(self, cam_para_file):
         self.mapper = Mapper(cam_para_file, "MOT17")
-        self.model = YOLO('image_processing/pretrained/yolov8x.pt')
+        self.model = YOLO('image_processing/pretrained/yolov8n.pt')
         #self.model = YOLO('/home/master/Desktop/Nebula-image-processing/yolotrain/runs/detect/visdrone-s/weights/best.pt')
 
     def get_dets(self, img, conf_thresh=0, det_classes=[0]):
