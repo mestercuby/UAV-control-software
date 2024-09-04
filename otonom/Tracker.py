@@ -47,8 +47,9 @@ class Tracker:
     def calculate_distance(self, target_center):
         position = target_center
 
-        relative_distance = self.hesap(self.vehicle.altitude, position, self.horizontal_fov, self.vehicle.gimbal_pitch)
-        distance = math.sqrt(relative_distance[0] ** 2 + relative_distance[1] ** 2)
+        relative_distance = self.hesap(self.vehicle.altitude, position, self.horizontal_fov, self.vehicle.gimbal_pitch-self.neutral_camera_angle)
+        #distance = math.sqrt(relative_distance[0] ** 2 + relative_distance[1] ** 2)
+        distance=10
 
         print("distance:", distance)
         return distance
@@ -72,11 +73,12 @@ class Tracker:
         Returns new lat/lon coordinate {d}km from initial, in degrees
         """
         R = 6371  # Earth radius in km
-
+        print("vehicle_lat:", self.vehicle.latitude)
+        print("vehicle_lon:", self.vehicle.longitude)
         lat1 = math.radians(self.vehicle.latitude)
         lon1 = math.radians(self.vehicle.longitude)
         target_offset = ((target_center[0] / self.camera_image_width) * self.horizontal_fov) - self.horizontal_fov/2
-
+        print("degree:", target_offset)
         a = math.radians((self.vehicle.heading + target_offset) % 360)
 
         print("target_angle:", math.degrees(a))
@@ -99,15 +101,15 @@ class Tracker:
             if target is not None:
                 target_center = self.calculate_center(target.id, target.bbox)
 
-                desired_distance = self.calculate_desired_distance()
+                desired_distance = 2
                 distance = (self.calculate_distance(target_center) - desired_distance) / 1000
 
                 lat, lon = self.get_point_at_distance(distance, target_center)
 
-                self.shared.set_roi(lat, lon)
-
                 print("destlat:", lat)
                 print("destlon:", lon)
+
+                self.vehicle.set_roi(lat, lon)
 
                 self.vehicle.move_to(lat, lon)
 

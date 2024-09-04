@@ -71,9 +71,9 @@ class Vehicle:
             if msg is not None:
                 # Update indicators
                 if msg.get_type() == 'GLOBAL_POSITION_INT':
-                    self.latitude = msg.lat
-                    self.longitude = msg.lon
-                    self.altitude = msg.alt
+                    self.latitude = msg.lat / 1e7
+                    self.longitude = msg.lon / 1e7
+                    self.altitude = msg.relative_alt / 1e3
                 if msg.get_type() == 'VFR_HUD':
                     self.airspeed = msg.airspeed
                     self.groundspeed = msg.groundspeed
@@ -117,8 +117,8 @@ class Vehicle:
             0, 0, target_altitude)
 
     def move_to(self, lat, lng, speed=-1):
-        lat = lat * 1e7
-        lng = lng * 1e7
+        lat = int(lat * 1e7)
+        lng = int(lng * 1e7)
         alt = self.altitude
         # Send command to move to the specified latitude, longitude, and current altitude
         self.connection.mav.command_int_send(
@@ -137,6 +137,8 @@ class Vehicle:
         )
 
     def set_roi(self, lat, lng, alt=0):
+        lat = int(lat * 1e7)
+        lng = int(lng * 1e7)
         self.connection.mav.command_int_send(
             self.connection.target_system,
             self.connection.target_component,
@@ -236,7 +238,7 @@ if __name__ == '__main__':
     time.sleep(1)
     # vehicle.take_gimbal_control()
     # vehicle.set_gimbal_mode()
-    # vehicle.set_gimbal_angle(0, -90)
+    # vehicle.set_gimbal_angle(0, 10)
     # vehicle.set_roi(40, 40)
     while True:
         # print(time.time() - oldtime)
