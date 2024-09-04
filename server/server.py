@@ -6,6 +6,8 @@ import time
 import msgpack
 
 
+
+
 class HandleMessageThread(threading.Thread):
 
     def __init__(self, client_socket, shared):
@@ -18,26 +20,31 @@ class HandleMessageThread(threading.Thread):
         self.shared = shared
 
     def run(self):
-        #Receiving Message
+        # Receiving Message
         while True:
-            self.shared.update_mission("")
-            print("receive")
-            data = b""
-            payload_size = struct.calcsize("L")
-            while len(data) < payload_size:
-                data += self.client_socket.recv(4096)
-            packed_msg_length = data[:payload_size]
-            data = data[payload_size:]
-            msg_length = struct.unpack("L", packed_msg_length)[0]
+            try:
+                while True:
+                    
+                    print("receive")
+                    data = b""
+                    payload_size = struct.calcsize("L")
+                    while len(data) < payload_size:
+                        data += self.client_socket.recv(4096)
+                    packed_msg_length = data[:payload_size]
+                    data = data[payload_size:]
+                    msg_length = struct.unpack("L", packed_msg_length)[0]
 
-            while len(data) < msg_length:
-                data += self.client_socket.recv(4096)
-            message = data[:msg_length].decode(self.format)
-            data = data[msg_length:]
-
-            print('New Message:', message)
-            self.shared.update_mission(message)
-            time.sleep(0.1)
+                    while len(data) < msg_length:
+                        data += self.client_socket.recv(4096)
+                    message = data[:msg_length].decode(self.format)
+                    data = data[msg_length:]
+                    print(f"[MESSAGE] {message}")
+                    self.shared.update_mission(message)
+                            
+                    
+                    time.sleep(0.1)
+            except Exception as e:
+                print(e)
 
 
 class VideoServerThread(threading.Thread):
@@ -46,7 +53,6 @@ class VideoServerThread(threading.Thread):
         self.buffer = buffer
         self.header = 64
         self.format = 'utf-8'
-        self.DISCONNECT_MESSAGE = "!DISCONNECT"
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((ip, port))
         self.timeout_seconds = 5

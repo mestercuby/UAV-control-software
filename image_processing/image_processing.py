@@ -310,29 +310,6 @@ def image_process_main(shared, isTest):
             current_dets.extend(new_dets)
             merged, groups = grouping(current_dets)
 
-        '''     
-        elif time.time()- dets_timers[det.track_id] >=threshold_time :
-                detections_list.append(det.to_dict())
-        
-        '''
-
-        """
-        for det in new_dets:
-            print(det.track_id)
-            # 画出检测框
-            if det.track_id > 0:
-                cv2.rectangle(frame_img, (int(det.bb_left), int(det.bb_top)), (int(det.bb_left+det.bb_width), int(det.bb_top+det.bb_height)), (0, 255, 0), 2)
-                # 画出检测框的id
-                cv2.putText(frame_img, str(det.track_id), (int(det.bb_left), int(det.bb_top)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-        for det in current_dets:
-            print(det.track_id)
-            # 画出检测框
-            if det.track_id > 0:
-                cv2.rectangle(frame_img, (int(det.bb_left), int(det.bb_top)), (int(det.bb_left+det.bb_width), int(det.bb_top+det.bb_height)), (0, 255, 0), 2)
-                # 画出检测框的id
-                cv2.putText(frame_img, str(det.track_id), (int(det.bb_left), int(det.bb_top)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        """
-
         #shared.update_detections(detections_list,frame_img)
         if len(merged) == 0:
             shared.update_target(None)
@@ -358,7 +335,7 @@ def image_process_main(shared, isTest):
             x_max = group.bb_left + group.bb_width
             y_max = group.bb_top + group.bb_height
 
-            shared.update_target(group)
+            #shared.update_target(group)
 
             if id not in dets_ids:
                 dets_ids[id] = id_counter

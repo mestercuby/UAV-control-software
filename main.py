@@ -2,13 +2,13 @@ import socket
 import threading
 import argparse
 import time
+import os
 
 from otonom.Vehicle import Vehicle
 from server.server import VideoServerThread, HandleMessageThread
 from image_processing.image_processing import image_process_main
 from Communication import Communication
 from simulation.subscribe_gz_image import ImageSubscriberThread
-
 
 def main(args):
     print(args)
@@ -27,7 +27,7 @@ def main(args):
     image_process.start()
     server.start()
    
-    vehicle.tracking_mission(1)
+    #vehicle.tracking_mission(1)
 
     print("Waiting for wifi connection...")
 
@@ -41,13 +41,27 @@ def main(args):
         handle_message_thread.start()
 
         while True:
-            time.sleep(1)
+            if shared.mission is not None:
+                command= shared.mission
+                if command == "track":
+                    target=int(shared.argument[0])
+                    
+                    detections=shared.get_detections()
+                    for detection in detections:
+                        if detection['id']==target:
+                            vehicle.tracking_mission(detection)
+                            break
+                shared.mission = None
+                shared.argument = None
+
+            time.sleep(0.1)
 
     except KeyboardInterrupt:
         print("Interrupted! Closing sockets and exiting...")
         if server.client_socket:
             server.client_socket.shutdown(socket.SHUT_RDWR)
         server.socket.shutdown(socket.SHUT_RDWR)
+        os._exit(0)
 
 
 parser = argparse.ArgumentParser(description='Process some arguments.')

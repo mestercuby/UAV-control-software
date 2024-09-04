@@ -93,11 +93,11 @@ class Tracker:
     def calculate_desired_distance(self):
         return self.vehicle.altitude * math.tan(math.radians(self.neutral_camera_angle))
 
-    def track(self):
+    def track(self,target):
         print("Tracking started")
         while True:
 
-            target = self.shared.get_target()
+            
             if target is not None:
                 target_center = self.calculate_center(target.id, target.bbox)
 
@@ -113,7 +113,8 @@ class Tracker:
 
                 self.vehicle.move_to(lat, lon)
 
-            if self.shared.mission == "abort" or self.shared.mission == "land":
+            if self.shared.mission == "abort":
+                self.vehicle.abort_mission()
                 break
 
             time.sleep(.1)
