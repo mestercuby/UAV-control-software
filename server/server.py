@@ -48,7 +48,7 @@ class HandleMessageThread(threading.Thread):
 
 
 class VideoServerThread(threading.Thread):
-    def __init__(self, ip=socket.gethostbyname(socket.gethostname()), port=5050, buffer=1024, shared=None):
+    def __init__(self, ip=socket.gethostbyname(socket.gethostname()), port=5050, buffer=1024, shared=None,position_estimator=None):
         super().__init__()
         self.buffer = buffer
         self.header = 64
@@ -57,6 +57,7 @@ class VideoServerThread(threading.Thread):
         self.socket.bind((ip, port))
         self.timeout_seconds = 5
         self.shared = shared
+        self.position_estimator = position_estimator
         self.client_socket = None
         print("[STARTING] server is starting...")
         print(f"[LISTENING] Server is listening on {ip}")
@@ -73,14 +74,21 @@ class VideoServerThread(threading.Thread):
                     start_time = time.time()
                     #print('sent')
                     detections, frame, last_update = self.shared.get_detections()
-
+                    final_dets = []
+                    for detection in detections:
+                        position = (self.position_estimator.get_position(detection, track=False))
+                        det=detection.to_dict()
+                        det['position'] = position
+                        final_dets.append(det)
+                        
+                    
                     if last_update and time.time() - last_update > self.timeout_seconds:
                         print("Detections stream has stopped.")
                         data_to_send = msgpack.packb({"error": "Detections stream has stopped."})
                         self.client_socket.sendall(data_to_send)
                         break
 
-                    detec_data = msgpack.packb(detections)
+                    detec_data = msgpack.packb(final_dets)
                     detec_data_length = struct.pack("L", len(detec_data))
 
                     Error_msg = self.shared.get_error_msg()

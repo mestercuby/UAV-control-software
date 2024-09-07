@@ -58,7 +58,7 @@ def merge_bboxes(group):
     conf = max(det.conf for det in group)
 
     #return [id, x_min, y_min, x_max, y_max]
-    return Detection(id, x_min, y_min, x_max - x_min, y_max - y_min, [x_min, y_min, x_max, y_max], conf)
+    return Detection(0, x_min, y_min, x_max - x_min, y_max - y_min, [x_min, y_min, x_max, y_max], conf,track_id=id)
 
 
 def grouping(current_dets, max_distance=100):
@@ -112,7 +112,7 @@ def check_surrounding(newdets, ldet, max_distance=300):
 # Detection:id,bb_left,bb_top,bb_width,bb_height, bbox,conf,det_class,track_id,y,R
 class Detection:
 
-    def __init__(self, id, bb_left=0, bb_top=0, bb_width=0, bb_height=0, bbox=[], conf=0, det_class=0):
+    def __init__(self, id, bb_left=0, bb_top=0, bb_width=0, bb_height=0, bbox=[], conf=0, det_class=0,track_id=0):
         self.id = id
         self.bb_left = bb_left
         self.bb_top = bb_top
@@ -121,7 +121,7 @@ class Detection:
         self.bbox = bbox
         self.conf = conf
         self.det_class = det_class
-        self.track_id = 0
+        self.track_id = track_id
         self.y = np.zeros((2, 1))
         self.R = np.eye(4)
 
@@ -310,13 +310,14 @@ def image_process_main(shared, isTest):
             current_dets.extend(new_dets)
             merged, groups = grouping(current_dets)
 
-        #shared.update_detections(detections_list,frame_img)
+        
+
         if len(merged) == 0:
             shared.update_target(None)
-            
+
         for i in range(len(merged)):
             group = merged[i]
-            id = group.id
+            id = group.track_id
 
             if id not in dets_timers:
 
@@ -329,13 +330,14 @@ def image_process_main(shared, isTest):
 
         for i in range(len(detections_list[0])):
             group = detections_list[0][i]
-            id = group.id
+            id = group.track_id
             x_min = group.bb_left
             y_min = group.bb_top
             x_max = group.bb_left + group.bb_width
             y_max = group.bb_top + group.bb_height
 
-            #shared.update_target(group)
+            #delete this only for debugging
+            shared.update_target(group)
 
             if id not in dets_ids:
                 dets_ids[id] = id_counter
@@ -352,9 +354,9 @@ def image_process_main(shared, isTest):
                                 (255, 0, 0), 2)
 
         frame_id += 1
-        final_dets=[det.to_dict() for det in detections_list[0]]
+        
       
-        shared.update_detections(final_dets, frame_img)
+        shared.update_detections(detections_list[0], frame_img)
 
         if not isTest:
             cv2.imshow("demo", frame_img)

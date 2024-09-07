@@ -9,7 +9,8 @@ from server.server import VideoServerThread, HandleMessageThread
 from image_processing.image_processing import image_process_main
 from Communication import Communication
 from simulation.subscribe_gz_image import ImageSubscriberThread
-
+from otonom.PositionEstimator import PositionEstimator
+from otonom.Tracker import Tracker
 def main(args):
     print(args)
     fps = 30
@@ -17,11 +18,11 @@ def main(args):
     shared = Communication(fps)
     vehicle = Vehicle(shared)
     vehicle.connect_to_vehicle()
-
+    position_estimator = PositionEstimator(vehicle, shared)
     if args.isTest == 1:
         ImageSubscriberThread(shared).start()
 
-    server = VideoServerThread(ip=args.ip, shared=shared)
+    server = VideoServerThread(ip=args.ip, shared=shared, position_estimator=position_estimator)
 
     image_process = threading.Thread(target=image_process_main, args=(shared, args.isTest))
     image_process.start()
@@ -44,12 +45,14 @@ def main(args):
             if shared.mission is not None:
                 command= shared.mission
                 if command == "track":
-                    target=int(shared.argument[0])
+                    target=int(shared.argument)
                     
                     detections=shared.get_detections()
                     for detection in detections:
                         if detection['id']==target:
-                            vehicle.tracking_mission(detection)
+                            tracker = Tracker(vehicle, shared, position_estimator)
+                            print("tracking:", detection['id'])
+                            threading.Thread(target=tracker.track,args=(detection)).start()
                             break
                 shared.mission = None
                 shared.argument = None

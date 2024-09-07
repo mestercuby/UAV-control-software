@@ -65,20 +65,12 @@ class Communication:
 
     def update_mission(self, new_message):
         command = new_message.split(' ')[0]
-        if command == "abort" and self.mission != "takeoff":
-            self.mission = "abort"
-
-        elif command in ["scan", "track", "takeoff"]:
+        if command=="track":
             argument = new_message.split(' ')[1]
-            if command == "takeoff" and len(argument) != 2:
-                self.error_msg = "wrong argument count for takeoff command"
-                return
-            elif len(argument) != 1:
+            if len(argument) != 1:
                 self.error_msg = f"wrong argument count for {command} command"
-                return
-            argument = [float(a) for a in argument.split(',')]
-
-            self.argument = argument
+                return  
+            self.argument = int(argument)
         else:
             self.argument = None
         self.mission = command

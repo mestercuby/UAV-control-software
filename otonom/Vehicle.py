@@ -5,7 +5,7 @@ import time
 from pymavlink import mavutil
 import pymavlink.dialects.v20.all as dialect
 
-from otonom.Tracker import Tracker
+
 
 
 class ConnectionStrings:
@@ -197,10 +197,7 @@ class Vehicle:
             0, 0, 0, 0, 0, 0
         )
 
-    def tracking_mission(self, target_id):
-        tracker = Tracker(self, self.communication)
-        print("tracking:", target_id)
-        threading.Thread(target=tracker.track).start()
+        
 
     def quaternion_to_euler_angles(self, q):
         """
@@ -238,7 +235,7 @@ if __name__ == '__main__':
     time.sleep(1)
     # vehicle.take_gimbal_control()
     # vehicle.set_gimbal_mode()
-    # vehicle.set_gimbal_angle(0, 10)
+    vehicle.set_gimbal_angle(60, 0)
     # vehicle.set_roi(40, 40)
     while True:
         # print(time.time() - oldtime)

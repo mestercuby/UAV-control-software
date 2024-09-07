@@ -40,7 +40,7 @@ class Image_Subscriber(Node):
         except OSError:
             print(f"Creation of the directory {self.path} failed")
 
-        image_topic = "/world/deneme_runway/model/iris_with_gimbal/model/gimbal/link/tilt_link/sensor/camera/image"
+        image_topic = "/world/skywalker_runway/model/skywalker_x8_quad/model/gimbal/link/tilt_link/sensor/camera/image"
         # image_topic = "/world/alti_runway/model/alti_transition_quad/model/gimbal/link/tilt_link/sensor/camera/image"
         self.subscription = self.create_subscription(Image, image_topic, self.image_callback, 10)
         self.subscription  # prevent unused variable warning
