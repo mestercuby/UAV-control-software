@@ -11,6 +11,8 @@ from Communication import Communication
 from simulation.subscribe_gz_image import ImageSubscriberThread
 from otonom.PositionEstimator import PositionEstimator
 from otonom.Tracker import Tracker
+
+
 def main(args):
     print(args)
     fps = 30
@@ -27,7 +29,7 @@ def main(args):
     image_process = threading.Thread(target=image_process_main, args=(shared, args.isTest))
     image_process.start()
     server.start()
-   
+
     #vehicle.tracking_mission(1)
 
     print("Waiting for wifi connection...")
@@ -41,21 +43,31 @@ def main(args):
         handle_message_thread = HandleMessageThread(server.client_socket, shared)
         handle_message_thread.start()
 
+        target = None
         while True:
+            detections = shared.get_detections()
+
+            # Handle new mission
             if shared.mission is not None:
-                command= shared.mission
+                command = shared.mission
                 if command == "track":
-                    target=int(shared.argument)
-                    
-                    detections=shared.get_detections()
+                    target = int(shared.argument)
+
                     for detection in detections:
-                        if detection['id']==target:
+                        if detection['id'] == target:
+                            print("Tracking:", detection['id'])
+                            shared.update_target(detection)
                             tracker = Tracker(vehicle, shared, position_estimator)
-                            print("tracking:", detection['id'])
-                            threading.Thread(target=tracker.track,args=(detection)).start()
+                            threading.Thread(target=tracker.track, args=detection).start()
                             break
                 shared.mission = None
                 shared.argument = None
+            else:
+                # Control if target is in the frame
+                for detection in detections:
+                    if detection['id'] == target:
+                        shared.update_target(detection)
+                        break
 
             time.sleep(0.1)
 

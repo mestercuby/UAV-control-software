@@ -197,7 +197,7 @@ class Vehicle:
             0, 0, 0, 0, 0, 0
         )
 
-        
+
 
     def quaternion_to_euler_angles(self, q):
         """
@@ -235,7 +235,7 @@ if __name__ == '__main__':
     time.sleep(1)
     # vehicle.take_gimbal_control()
     # vehicle.set_gimbal_mode()
-    vehicle.set_gimbal_angle(60, 0)
+    # vehicle.set_gimbal_angle(0, 10)
     # vehicle.set_roi(40, 40)
     while True:
         # print(time.time() - oldtime)

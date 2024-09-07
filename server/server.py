@@ -6,8 +6,6 @@ import time
 import msgpack
 
 
-
-
 class HandleMessageThread(threading.Thread):
 
     def __init__(self, client_socket, shared):
@@ -24,8 +22,6 @@ class HandleMessageThread(threading.Thread):
         while True:
             try:
                 while True:
-                    
-                    print("receive")
                     data = b""
                     payload_size = struct.calcsize("L")
                     while len(data) < payload_size:
@@ -40,8 +36,7 @@ class HandleMessageThread(threading.Thread):
                     data = data[msg_length:]
                     print(f"[MESSAGE] {message}")
                     self.shared.update_mission(message)
-                            
-                    
+
                     time.sleep(0.1)
             except Exception as e:
                 print(e)
