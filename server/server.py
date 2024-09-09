@@ -49,6 +49,7 @@ class VideoServerThread(threading.Thread):
         self.header = 64
         self.format = 'utf-8'
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((ip, port))
         self.timeout_seconds = 5
         self.shared = shared
@@ -67,15 +68,7 @@ class VideoServerThread(threading.Thread):
             try:
                 while True:
                     start_time = time.time()
-                    #print('sent')
                     detections, frame, last_update = self.shared.get_detections()
-                    final_dets = []
-                    for detection in detections:
-                        position = (self.position_estimator.get_position(detection, track=False))
-                        det=detection.to_dict()
-                        det['position'] = position
-                        final_dets.append(det)
-                        
                     
                     if last_update and time.time() - last_update > self.timeout_seconds:
                         print("Detections stream has stopped.")
@@ -83,7 +76,7 @@ class VideoServerThread(threading.Thread):
                         self.client_socket.sendall(data_to_send)
                         break
 
-                    detec_data = msgpack.packb(final_dets)
+                    detec_data = msgpack.packb(detections)
                     detec_data_length = struct.pack("L", len(detec_data))
 
                     Error_msg = self.shared.get_error_msg()

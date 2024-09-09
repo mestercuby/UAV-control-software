@@ -43,31 +43,18 @@ def main(args):
         handle_message_thread = HandleMessageThread(server.client_socket, shared)
         handle_message_thread.start()
 
-        target = None
+        tracker = Tracker(vehicle, shared, position_estimator)
+        threading.Thread(target=tracker.track).start()
+
         while True:
-            detections = shared.get_detections()
 
             # Handle new mission
-            if shared.mission is not None:
-                command = shared.mission
-                if command == "track":
-                    target = int(shared.argument)
-
-                    for detection in detections:
-                        if detection['id'] == target:
-                            print("Tracking:", detection['id'])
-                            shared.update_target(detection)
-                            tracker = Tracker(vehicle, shared, position_estimator)
-                            threading.Thread(target=tracker.track, args=detection).start()
-                            break
-                shared.mission = None
-                shared.argument = None
-            else:
-                # Control if target is in the frame
-                for detection in detections:
-                    if detection['id'] == target:
-                        shared.update_target(detection)
-                        break
+            if shared.mission == "track":
+                shared.track_mission = True
+                shared.update_target(int(shared.argument))
+            
+            if shared.mission == "abort" or vehicle.flight_mode == 'QRTL':
+                shared.track_mission = False
 
             time.sleep(0.1)
 

@@ -42,6 +42,8 @@ class Communication:
         # image from simulation
         self.camera_image = numpy.zeros((480, 640, 3), numpy.uint8)
 
+        self.track_mission = False
+
     def update_camera_image(self, image):
         self.camera_image = numpy.copy(image)
 
@@ -83,9 +85,6 @@ class Communication:
 
     def get_error_msg(self):
         return self.error_msg
-
-    def get_target(self):
-        return self.track_target
     
     def update_target(self, target):
         self.track_target = target

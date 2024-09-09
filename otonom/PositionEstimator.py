@@ -10,41 +10,46 @@ class PositionEstimator :
         self.camera_image_height = 480
         self.horizontal_fov = 63
 
-        self.neutral_camera_angle = 60
-    def hesap(self, height, pos, horizontal_fov, camera_angle):
+    def hesap(self, pos):
         aspect_ratio = float(self.camera_image_width) / self.camera_image_height
-        horizontal_fov_rad = math.radians(horizontal_fov)
-        camera_angle_rad = math.radians(camera_angle)
-
+        horizontal_fov_rad = math.radians(self.horizontal_fov)
         vertical_fov_rad = 2 * math.atan(math.tan(horizontal_fov_rad / 2) / aspect_ratio)
 
-        vertical_fov = math.degrees(vertical_fov_rad)
-
+        camera_angle = math.pi / 2 - (self.vehicle.gimbal_pitch-self.vehicle.pitch + vertical_fov_rad / 2)
+        height = self.vehicle.altitude
         mesafe = [0, 0]
-        # x = height / math.cos(camera_angle / 57.3)
-        x = height / math.cos(camera_angle_rad)
-        # L = 2 * x * math.sin(horizontal_fov / 114.6)
-        L = 2 * x * math.sin(horizontal_fov_rad / 2)
+
+
+        # calculating angle for x distance of the target
+        x = height / math.cos(camera_angle)
+        L = 2 * x * math.sin(vertical_fov_rad / 2)
         m = (self.camera_image_height - pos[1]) / self.camera_image_height * L
         n = pos[1] / self.camera_image_height * L
-        # h0 = x * math.cos(horizontal_fov / 114.6)
-        h0 = x * math.cos(horizontal_fov_rad / 2)
-        angle = math.asin(L / (2 * x)) - math.atan((n - m) / (2 * h0))
-        # mesafe[0] = height * math.tan(camera_angle / 57.3 + angle)
-        mesafe[0] = height * math.tan(camera_angle_rad + angle)
+        h0 = x * math.cos(vertical_fov_rad / 2)
+        x_offset_angle = vertical_fov_rad/2 - math.atan((n - m) / (2 * h0))
+        x_angle = camera_angle + x_offset_angle
 
-        # v = height / math.cos(camera_angle / 57.3 + angle)
-        v = height / math.cos(camera_angle_rad + angle)
-        # p = v * math.tan(vertical_fov / 114.6)
-        p = v * math.tan(vertical_fov_rad / 2)
-        mesafe[1] = ((self.camera_image_width / 2) - pos[0]) / (self.camera_image_width / 2) * p
+        mesafe[0] = height * math.tan(x_angle)
+
+        
+        # calculating angle for y distance of the target
+        y_offset_angle= self.vehicle.roll - horizontal_fov_rad / 2
+        v = height / math.cos(x_angle)
+        Z= v / math.cos(y_offset_angle) 
+        L2 = 2 * Z * math.sin(horizontal_fov_rad / 2)
+        m2 = pos[0] / self.camera_image_width * L2
+        n2 = (self.camera_image_width - pos[0]) / self.camera_image_width * L2
+        h02 = Z * math.cos(horizontal_fov_rad / 2)
+        y_angle = y_offset_angle + horizontal_fov_rad / 2 - math.atan((n2 - m2) / (2 * h02))
+
+        mesafe[1] = v * math.tan(y_angle)
 
         return mesafe
 
     def calculate_distance(self, target_center):
         position = target_center
 
-        relative_distance = self.hesap(self.vehicle.altitude, position, self.horizontal_fov, self.vehicle.gimbal_pitch-self.neutral_camera_angle)
+        relative_distance = self.hesap(position)
         distance = math.sqrt(relative_distance[0] ** 2 + relative_distance[1] ** 2)
 
         print("distance:", distance)

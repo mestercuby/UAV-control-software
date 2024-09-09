@@ -17,6 +17,11 @@ class ConnectionStrings:
 class Vehicle:
 
     def __init__(self, communication=None):
+        # Set default values for variables
+        self.communication = communication  # Communication with other components
+        self.connection = None
+        self.gimbal_pitch_offset = math.radians(60)
+
         # Telemetry data
         self.latitude = 0
         self.longitude = 0
@@ -30,13 +35,9 @@ class Vehicle:
         self.yaw = 0
         self.battery_voltage = 0
         self.battery_remaining = 0
-
+        self.flight_mode = 0
         self.gimbal_pitch = 0
         self.gimbal_yaw = 0
-
-        # Set default values for variables
-        self.communication = communication  # Communication with other components
-        self.connection = None
 
         # Connect to the vehicle
         self.connect_to_vehicle()
@@ -63,7 +64,7 @@ class Vehicle:
     def update_telemetry_data(self):
 
         type_list = ['ATTITUDE', 'GLOBAL_POSITION_INT', 'VFR_HUD', 'SYS_STATUS',
-                     'GIMBAL_DEVICE_ATTITUDE_STATUS']
+                     'GIMBAL_DEVICE_ATTITUDE_STATUS', 'HEARTBEAT']
 
         while True:
             # Get the latest message from the vehicle
@@ -86,9 +87,11 @@ class Vehicle:
                 if msg.get_type() == 'SYS_STATUS':
                     self.battery_voltage = msg.voltage_battery
                     self.battery_remaining = msg.battery_remaining
-
+                if msg.get_type() == 'HEARTBEAT':
+                    self.flight_mode = mavutil.mode_string_v10(msg)
                 if msg.get_type() == 'GIMBAL_DEVICE_ATTITUDE_STATUS':
                     roll, self.gimbal_pitch, self.gimbal_yaw = self.quaternion_to_euler_angles(msg.q)
+                    self.gimbal_pitch += self.gimbal_pitch_offset
 
             time.sleep(0.02)
 

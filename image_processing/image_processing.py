@@ -198,7 +198,7 @@ class Detector:
         return dets
 
 
-def image_process_main(shared, isTest):
+def image_process_main(shared, isTest,position_estimator=None):
     number = -1
     class_list = [0, 2, 5, 7]
     mega_lost_dets = []
@@ -337,7 +337,7 @@ def image_process_main(shared, isTest):
             y_max = group.bb_top + group.bb_height
 
             #delete this only for debugging
-            shared.update_target(group)
+            #shared.update_target(group.track_id)
 
             if id not in dets_ids:
                 dets_ids[id] = id_counter
@@ -355,8 +355,13 @@ def image_process_main(shared, isTest):
 
         frame_id += 1
         
-      
-        shared.update_detections(detections_list[0], frame_img)
+        final_dets = []
+        for detection in detections_list[0]:
+            position = (position_estimator.get_position(detection, track=False))
+            det=detection.to_dict()
+            det['position'] = position
+            final_dets.append(det)
+        shared.update_detections(final_dets, frame_img)
 
         if not isTest:
             cv2.imshow("demo", frame_img)
