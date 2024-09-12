@@ -39,11 +39,11 @@ class HandleMessageThread(threading.Thread):
 
                     time.sleep(0.1)
             except Exception as e:
-                print(e)
+                pass
 
 
 class VideoServerThread(threading.Thread):
-    def __init__(self, ip=socket.gethostbyname(socket.gethostname()), port=5050, buffer=1024, shared=None,position_estimator=None):
+    def __init__(self, ip=socket.gethostbyname(socket.gethostname()), port=5050, buffer=1024, shared=None):
         super().__init__()
         self.buffer = buffer
         self.header = 64
@@ -53,7 +53,6 @@ class VideoServerThread(threading.Thread):
         self.socket.bind((ip, port))
         self.timeout_seconds = 5
         self.shared = shared
-        self.position_estimator = position_estimator
         self.client_socket = None
         print("[STARTING] server is starting...")
         print(f"[LISTENING] Server is listening on {ip}")

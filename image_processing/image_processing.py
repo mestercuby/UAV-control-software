@@ -275,11 +275,11 @@ def image_process_main(shared, isTest,position_estimator=None):
             for det in lost_dets:
                 if det.track_id != 0:
                     mega_lost_dets.append((det, frame_id))
-                    print(f"detection lost:{det.track_id}")
+                    #print(f"detection lost:{det.track_id}")
             for ndet in new_dets:
                 if ndet.track_id == 0:
                     new_dets.remove(ndet)
-                print(f"new detection:{ndet.track_id}")
+                #print(f"new detection:{ndet.track_id}")
             for ldet in mega_lost_dets:
                 if frame_id - ldet[1] > 10:
                     mega_lost_dets.remove(ldet)
@@ -287,7 +287,7 @@ def image_process_main(shared, isTest,position_estimator=None):
                 else:
                     for ndet in new_dets:
                         if calculate_iou(ldet[0].bbox, ndet.bbox) > 0.5:
-                            print(f"ldet:{ldet[0].track_id} ndet:{ndet.track_id}")
+                            #print(f"ldet:{ldet[0].track_id} ndet:{ndet.track_id}")
                             ndet.track_id = ldet[0].track_id
                             mega_lost_dets.remove(ldet)
                             new_dets.remove(ndet)
@@ -302,7 +302,7 @@ def image_process_main(shared, isTest,position_estimator=None):
                         nearest_det_index = check_surrounding(new_dets, ldet[0])
                         if nearest_det_index is not None:
                             ndet = new_dets[nearest_det_index]
-                            print(f"nearest_det:{ndet.track_id}, lost:{ldet[0].track_id}")
+                            #print(f"nearest_det:{ndet.track_id}, lost:{ldet[0].track_id}")
                             ndet.track_id = ldet[0].track_id
                             mega_lost_dets.remove(ldet)
                             new_dets.remove(ndet)
@@ -337,7 +337,7 @@ def image_process_main(shared, isTest,position_estimator=None):
             y_max = group.bb_top + group.bb_height
 
             #delete this only for debugging
-            #shared.update_target(group.track_id)
+            
 
             if id not in dets_ids:
                 dets_ids[id] = id_counter
@@ -357,7 +357,7 @@ def image_process_main(shared, isTest,position_estimator=None):
         
         final_dets = []
         for detection in detections_list[0]:
-            position = (position_estimator.get_position(detection, track=False))
+            position = (position_estimator.get_position(detection))
             det=detection.to_dict()
             det['position'] = position
             final_dets.append(det)

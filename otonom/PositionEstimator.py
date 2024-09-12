@@ -15,34 +15,36 @@ class PositionEstimator :
         horizontal_fov_rad = math.radians(self.horizontal_fov)
         vertical_fov_rad = 2 * math.atan(math.tan(horizontal_fov_rad / 2) / aspect_ratio)
 
-        camera_angle = math.pi / 2 - (self.vehicle.gimbal_pitch-self.vehicle.pitch + vertical_fov_rad / 2)
+        print("vertical_fov:", math.degrees(vertical_fov_rad))
+        print("self.horizontal_fov:", self.horizontal_fov)
+
+        camera_angle = math.pi / 2 + self.vehicle.gimbal_pitch+self.vehicle.pitch - (vertical_fov_rad / 2)
         height = self.vehicle.altitude
         mesafe = [0, 0]
-
-
-        # calculating angle for x distance of the target
+        # calculating angle for y distance of the target
         x = height / math.cos(camera_angle)
+        print("x:", x)
         L = 2 * x * math.sin(vertical_fov_rad / 2)
+        print("L:", L)
         m = (self.camera_image_height - pos[1]) / self.camera_image_height * L
         n = pos[1] / self.camera_image_height * L
         h0 = x * math.cos(vertical_fov_rad / 2)
-        x_offset_angle = vertical_fov_rad/2 - math.atan((n - m) / (2 * h0))
-        x_angle = camera_angle + x_offset_angle
-
-        mesafe[0] = height * math.tan(x_angle)
+        y_offset_angle = vertical_fov_rad/2 - math.atan((n - m) / (2 * h0))
+        y_angle = camera_angle + y_offset_angle
+        mesafe[1] = height * math.tan(y_angle)
 
         
-        # calculating angle for y distance of the target
-        y_offset_angle= self.vehicle.roll - horizontal_fov_rad / 2
-        v = height / math.cos(x_angle)
-        Z= v / math.cos(y_offset_angle) 
+        # calculating angle for x distance of the target
+        x_offset_angle= self.vehicle.roll - horizontal_fov_rad / 2
+        v = height / math.cos(y_angle)
+        Z= v / math.cos(x_offset_angle) 
         L2 = 2 * Z * math.sin(horizontal_fov_rad / 2)
         m2 = pos[0] / self.camera_image_width * L2
         n2 = (self.camera_image_width - pos[0]) / self.camera_image_width * L2
         h02 = Z * math.cos(horizontal_fov_rad / 2)
-        y_angle = y_offset_angle + horizontal_fov_rad / 2 - math.atan((n2 - m2) / (2 * h02))
+        x_angle = x_offset_angle + horizontal_fov_rad / 2 - math.atan((n2 - m2) / (2 * h02))
 
-        mesafe[1] = v * math.tan(y_angle)
+        mesafe[0] = v * math.tan(x_angle)
 
         return mesafe
 
@@ -50,10 +52,10 @@ class PositionEstimator :
         position = target_center
 
         relative_distance = self.hesap(position)
-        distance = math.sqrt(relative_distance[0] ** 2 + relative_distance[1] ** 2)
-
-        print("distance:", distance)
-        return distance
+        distance = math.sqrt(relative_distance[1] ** 2 + relative_distance[0] ** 2)
+        target_angle = math.degrees(math.atan2(relative_distance[0], relative_distance[1]))
+        print("relative_distance:", relative_distance)
+        return distance, target_angle
 
     def calculate_center(self, class_id, bbox):
         x_center = (bbox[0] + bbox[2]) / 2
@@ -63,7 +65,7 @@ class PositionEstimator :
             y_center = (bbox[1] + bbox[3]) / 2
         return x_center, y_center
 
-    def get_point_at_distance(self, d, target_center):
+    def get_point_at_distance(self, d, target_angle):
         """
         lat: initial latitude, in degrees
         lon: initial longitude, in degrees
@@ -74,15 +76,16 @@ class PositionEstimator :
         Returns new lat/lon coordinate {d}km from initial, in degrees
         """
         R = 6371  # Earth radius in km
-        print("vehicle_lat:", self.vehicle.latitude)
-        print("vehicle_lon:", self.vehicle.longitude)
+        #print("vehicle_lat:", self.vehicle.latitude)
+        #print("vehicle_lon:", self.vehicle.longitude)
         lat1 = math.radians(self.vehicle.latitude)
         lon1 = math.radians(self.vehicle.longitude)
-        target_offset = ((target_center[0] / self.camera_image_width) * self.horizontal_fov) - self.horizontal_fov/2
-        print("degree:", target_offset)
-        a = math.radians((self.vehicle.heading + target_offset) % 360)
-
-        print("target_angle:", math.degrees(a))
+        
+        a = math.radians((self.vehicle.heading + target_angle + math.degrees(self.vehicle.gimbal_yaw)) % 360)
+        print("self.vehicle.heading:", self.vehicle.heading)
+        print("target_angle:", target_angle)
+        print("self.vehicle.gimbal_yaw:", math.degrees(self.vehicle.gimbal_yaw))
+       
 
         lat2 = math.asin(math.sin(lat1) * math.cos(d / R) + math.cos(lat1) * math.sin(d / R) * math.cos(a))
         lon2 = lon1 + math.atan2(
@@ -91,14 +94,14 @@ class PositionEstimator :
         )
         return math.degrees(lat2), math.degrees(lon2)
     
-    def get_position(self, target,track=False,distance_offset=2):
+    def get_position(self, target,track=False,distance_offset=0):
         target_center = self.calculate_center(target.det_class, target.bbox)
         if track:
             iterative_distance = 10
         else:
-            iterative_distance = self.calculate_distance(target_center)
+            iterative_distance, target_angle = self.calculate_distance(target_center)
 
-        distance = (iterative_distance-distance_offset)/100
-        lat, lon = self.get_point_at_distance(distance, target_center)
+        distance = (iterative_distance-distance_offset)/1000
+        lat, lon = self.get_point_at_distance(distance, target_angle)
 
         return lat, lon

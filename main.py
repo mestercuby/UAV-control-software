@@ -20,13 +20,14 @@ def main(args):
     shared = Communication(fps)
     vehicle = Vehicle(shared)
     vehicle.connect_to_vehicle()
+    vehicle.set_gimbal_angle(-60, 0)
     position_estimator = PositionEstimator(vehicle, shared)
     if args.isTest == 1:
         ImageSubscriberThread(shared).start()
 
-    server = VideoServerThread(ip=args.ip, shared=shared, position_estimator=position_estimator)
+    server = VideoServerThread(ip=args.ip, shared=shared)
 
-    image_process = threading.Thread(target=image_process_main, args=(shared, args.isTest))
+    image_process = threading.Thread(target=image_process_main, args=(shared, args.isTest,position_estimator))
     image_process.start()
     server.start()
 

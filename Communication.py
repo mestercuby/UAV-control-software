@@ -68,10 +68,7 @@ class Communication:
     def update_mission(self, new_message):
         command = new_message.split(' ')[0]
         if command=="track":
-            argument = new_message.split(' ')[1]
-            if len(argument) != 1:
-                self.error_msg = f"wrong argument count for {command} command"
-                return  
+            argument = new_message.split(' ')[1] 
             self.argument = int(argument)
         else:
             self.argument = None

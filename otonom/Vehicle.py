@@ -91,8 +91,6 @@ class Vehicle:
                     self.flight_mode = mavutil.mode_string_v10(msg)
                 if msg.get_type() == 'GIMBAL_DEVICE_ATTITUDE_STATUS':
                     roll, self.gimbal_pitch, self.gimbal_yaw = self.quaternion_to_euler_angles(msg.q)
-                    self.gimbal_pitch += self.gimbal_pitch_offset
-
             time.sleep(0.02)
 
     def set_flight_mode(self, mode):

@@ -15,6 +15,8 @@ class Tracker:
         self.neutral_camera_angle = 60
         self.position_estimator = position_estimator
 
+        self.timeout_second = 5
+
     def get_distance_from_lat_lon_in_km(point1, point2):
         R = 6371  # Radius of the earth in km
         dLat = math.radians(point2[0] - point1[0])
@@ -29,19 +31,24 @@ class Tracker:
         return d
 
     def track(self):
+        flag = False
+        start_timer = time.time()
         while True:
             if not self.shared.track_mission:
                 time.sleep(0.1)
                 continue
             
-            detections = self.shared.get_detections()
-            target_id = self.shared.target
+            detections, frame, last_update = self.shared.get_detections()
+            target_id = self.shared.track_target
             target = None
-            for detection in detections:
-                if detection['id'] == target_id:
-                    print("Tracking:", detection['id'])
-                    target=detection
-                    break
+            if target_id == -1 and len(detections) > 0:
+                target = detections[0]
+            else:
+                for detection in detections:
+                    if detection['track_id'] == target_id:
+                        print("Tracking:", detection['track_id'])
+                        target=detection
+                        break
             if target is not None:
                 lat, lon = target['position']
 
@@ -50,7 +57,14 @@ class Tracker:
 
                 self.vehicle.set_roi(lat, lon)
                 self.vehicle.move_to(lat, lon)
-            else:
-                print("Target lost")
+
+                start_timer = time.time()
+                flag = True
+                
+            elif time.time() - start_timer > self.timeout_second and flag:
+                self.shared.track_mission = False
+                self.vehicle.cancel_roi_mode()
+                self.vehicle.set_gimbal_angle(-60,0)
+                flag = False
             
             time.sleep(.15)
