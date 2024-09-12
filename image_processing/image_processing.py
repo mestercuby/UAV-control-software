@@ -198,7 +198,7 @@ class Detector:
         return dets
 
 
-def image_process_main(shared, isTest,position_estimator=None):
+def image_process_main(shared, isTest, position_estimator=None):
     number = -1
     class_list = [0, 2, 5, 7]
     mega_lost_dets = []
@@ -218,12 +218,12 @@ def image_process_main(shared, isTest,position_estimator=None):
     #video_path="/home/master/Desktop/UAV-control-software/image_processing/demo/demo.mp4"
     if isTest:
         time.sleep(1)
-
         fps = 30
         width = 640
         height = 480
     else:
-        cap = cv2.VideoCapture(0)
+        video_path="nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)3840, height=(int)2160, framerate=(fraction)30/1 ! nvvidconv flip-method=2 ! video/x-raw(memory:NVMM), width=(int)960, height=(int)480, format=(string)I420 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! appsink drop=1"
+        cap = cv2.VideoCapture(video_path, cv2.CAP_GSTREAMER)
         # fps
         fps = cap.get(cv2.CAP_PROP_FPS)
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -362,12 +362,6 @@ def image_process_main(shared, isTest,position_estimator=None):
             det['position'] = position
             final_dets.append(det)
         shared.update_detections(final_dets, frame_img)
-
-        if not isTest:
-            cv2.imshow("demo", frame_img)
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
 
         elapsed_time = time.time() - start_time
         sleep_time = frame_time - elapsed_time

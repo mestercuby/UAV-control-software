@@ -4,11 +4,11 @@ import argparse
 import time
 import os
 
-from otonom.Vehicle import Vehicle
+from otonom.Vehicle import Vehicle, ConnectionStrings
 from server.server import VideoServerThread, HandleMessageThread
 from image_processing.image_processing import image_process_main
 from Communication import Communication
-from simulation.subscribe_gz_image import ImageSubscriberThread
+
 from otonom.PositionEstimator import PositionEstimator
 from otonom.Tracker import Tracker
 
@@ -19,11 +19,15 @@ def main(args):
 
     shared = Communication(fps)
     vehicle = Vehicle(shared)
-    vehicle.connect_to_vehicle()
+    if args.isTest == True:
+        vehicle.connect_to_vehicle(ConnectionStrings.SITL)
+        from simulation.subscribe_gz_image import ImageSubscriberThread
+        ImageSubscriberThread(shared).start()
+    else:
+        vehicle.connect_to_vehicle(ConnectionStrings.USB)
     vehicle.set_gimbal_angle(-60, 0)
     position_estimator = PositionEstimator(vehicle, shared)
-    if args.isTest == 1:
-        ImageSubscriberThread(shared).start()
+
 
     server = VideoServerThread(ip=args.ip, shared=shared)
 
@@ -69,7 +73,7 @@ def main(args):
 
 parser = argparse.ArgumentParser(description='Process some arguments.')
 parser.add_argument('--ip', type=str, default="127.0.0.1", help='ip address')
-parser.add_argument('--isTest', type=bool, default=True, help='do you use simulation or real camera')
+parser.add_argument('--isTest', type=bool, default=False, help='do you use simulation or real camera')
 
 """
 parser.add_argument('--cam_para', type=str, default = "/home/master/Desktop//Otonom/image_processing/demo/cam_para.txt", help='camera parameter file name')

@@ -73,7 +73,7 @@ class Communication:
         else:
             self.argument = None
         self.mission = command
-
+    
     def get_mission(self):
         return self.mission, self.argument
 
