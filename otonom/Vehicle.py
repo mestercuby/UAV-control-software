@@ -21,6 +21,7 @@ class Vehicle:
         self.communication = communication  # Communication with other components
         self.connection = None
         self.gimbal_pitch_offset = math.radians(60)
+        self.speed_limit = 10  # m/s
 
         # Telemetry data
         self.latitude = 0
@@ -130,7 +131,7 @@ class Vehicle:
             dialect.MAV_CMD_DO_REPOSITION,
             0,  # Current
             0,  # Autocontinue
-            speed,
+            self.speed_limit,
             0, 0, 0,  # Params 2-4 (unused)
             lat,
             lng,
