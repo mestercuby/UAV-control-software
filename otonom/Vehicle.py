@@ -161,7 +161,8 @@ class Vehicle:
             dialect.MAV_CMD_DO_SET_ROI_NONE,
             0, 0,
             0, 0, 0, 0,
-            0, 0, 0)
+            0, 0, 0
+        )
 
     def set_gimbal_angle(self, pitch, yaw):
         # Send command to move to the specified latitude, longitude, and current altitude
