@@ -56,7 +56,7 @@ class Tracker:
                 print("destlon:", lon)
 
                 self.vehicle.set_roi(lat, lon)
-                self.vehicle.move_to(lat, lon)
+                self.vehicle.move_to(lat, lon, 5)
 
                 start_timer = time.time()
                 flag = True

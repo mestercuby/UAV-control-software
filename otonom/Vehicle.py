@@ -40,9 +40,6 @@ class Vehicle:
         self.gimbal_pitch = 0
         self.gimbal_yaw = 0
 
-        # Connect to the vehicle
-        self.connect_to_vehicle()
-
     def connect_to_vehicle(self, connection_string=ConnectionStrings.SITL, baudrate=115200):
         timeout = 10  # seconds
 
@@ -131,7 +128,7 @@ class Vehicle:
             dialect.MAV_CMD_DO_REPOSITION,
             0,  # Current
             0,  # Autocontinue
-            self.speed_limit,
+            speed,
             0, 0, 0,  # Params 2-4 (unused)
             lat,
             lng,
