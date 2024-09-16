@@ -232,6 +232,9 @@ def image_process_main(shared, isTest, position_estimator=None):
         fps = cap.get(cv2.CAP_PROP_FPS)
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        print("Fps: ", fps)
+        print("Width: ", width)
+        print("Height: ", height)
 
 
     #cv2.namedWindow("demo", cv2.WINDOW_NORMAL)
@@ -246,8 +249,6 @@ def image_process_main(shared, isTest, position_estimator=None):
     frame_time = 1 / fps
 
     frame_id = 1
-    print(fps)
-    print(frame_time)
     new_dets = []
     current_dets = []
     groups = []

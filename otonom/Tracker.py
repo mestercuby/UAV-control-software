@@ -8,10 +8,6 @@ class Tracker:
         self.vehicle = vehicle
         self.shared = shared
 
-        self.camera_image_width = 640
-        self.camera_image_height = 480
-        self.horizontal_fov = 63
-
         self.neutral_camera_angle = 60
         self.position_estimator = position_estimator
 
@@ -56,7 +52,7 @@ class Tracker:
                 print("destlon:", lon)
 
                 self.vehicle.set_roi(lat, lon)
-                self.vehicle.move_to(lat, lon, 5)
+                #self.vehicle.move_to(lat, lon, 5)
 
                 start_timer = time.time()
                 flag = True
@@ -64,7 +60,7 @@ class Tracker:
             elif time.time() - start_timer > self.timeout_second and flag:
                 self.shared.track_mission = False
                 self.vehicle.cancel_roi_mode()
-                self.vehicle.set_gimbal_angle(-60,0)
+                self.vehicle.set_gimbal_angle(-60, 0)
                 flag = False
             
             time.sleep(.15)

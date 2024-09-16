@@ -6,9 +6,9 @@ class PositionEstimator :
         self.vehicle = vehicle
         self.shared = shared
 
-        self.camera_image_width = 640
-        self.camera_image_height = 480
-        self.horizontal_fov = 63
+        self.camera_image_width = 1280
+        self.camera_image_height = 720
+        self.horizontal_fov = 103
 
     def hesap(self, pos):
         aspect_ratio = float(self.camera_image_width) / self.camera_image_height
