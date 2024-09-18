@@ -16,6 +16,9 @@ from otonom.Tracker import Tracker
 def main(args):
     print(args)
     fps = 30
+    height = 1280
+    width = 720
+    horizontal_fov = 110
 
     shared = Communication(fps)
     vehicle = Vehicle(shared)
@@ -25,13 +28,16 @@ def main(args):
         ImageSubscriberThread(shared).start()
     else:
         vehicle.connect_to_vehicle(ConnectionStrings.USB)
-    vehicle.set_gimbal_angle(-60, 0)
-    position_estimator = PositionEstimator(vehicle, shared)
+    vehicle.set_gimbal_angle(-45, 0)
+    position_estimator = PositionEstimator(vehicle, shared, height, width, horizontal_fov)
 
 
     server = VideoServerThread(ip=args.ip, shared=shared)
+    handle_message_thread = HandleMessageThread(server.client_socket, shared)
+    server.set_message_handler(handle_message_thread)
 
     image_process = threading.Thread(target=image_process_main, args=(shared, args.isTest,position_estimator))
+    
     image_process.start()
     server.start()
 
@@ -45,10 +51,9 @@ def main(args):
 
         print("Wifi connection established!")
 
-        handle_message_thread = HandleMessageThread(server.client_socket, shared)
         handle_message_thread.start()
 
-        tracker = Tracker(vehicle, shared, position_estimator)
+        tracker = Tracker(vehicle, shared, position_estimator,args.onlyroi)
         threading.Thread(target=tracker.track).start()
 
         while True:
@@ -74,6 +79,7 @@ def main(args):
 parser = argparse.ArgumentParser(description='Process some arguments.')
 parser.add_argument('--ip', type=str, default="127.0.0.1", help='ip address')
 parser.add_argument('--isTest', type=bool, default=False, help='do you use simulation or real camera')
+parser.add_argument('--onlyroi', type=bool, default=False, help='do you want to move plane or just gimbal')
 
 """
 parser.add_argument('--cam_para', type=str, default = "/home/master/Desktop//Otonom/image_processing/demo/cam_para.txt", help='camera parameter file name')

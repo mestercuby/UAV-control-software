@@ -3,16 +3,11 @@ import math
 
 
 class Tracker:
-    def __init__(self, vehicle, shared, position_estimator):
+    def __init__(self, vehicle, shared, position_estimator,onlyroi):
 
         self.vehicle = vehicle
         self.shared = shared
-
-        self.camera_image_width = 640
-        self.camera_image_height = 480
-        self.horizontal_fov = 63
-
-        self.neutral_camera_angle = 60
+        self.onlyroi=onlyroi
         self.position_estimator = position_estimator
 
         self.timeout_second = 5
@@ -56,7 +51,8 @@ class Tracker:
                 print("destlon:", lon)
 
                 self.vehicle.set_roi(lat, lon)
-                self.vehicle.move_to(lat, lon)
+                if not self.onlyroi: 
+                    self.vehicle.move_to(lat, lon)
 
                 start_timer = time.time()
                 flag = True

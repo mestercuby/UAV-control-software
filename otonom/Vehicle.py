@@ -40,9 +40,6 @@ class Vehicle:
         self.gimbal_pitch = 0
         self.gimbal_yaw = 0
 
-        # Connect to the vehicle
-        self.connect_to_vehicle()
-
     def connect_to_vehicle(self, connection_string=ConnectionStrings.SITL, baudrate=115200):
         timeout = 10  # seconds
 

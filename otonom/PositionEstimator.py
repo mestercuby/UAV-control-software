@@ -2,13 +2,13 @@ import math
 import time
 
 class PositionEstimator :
-    def __init__(self, vehicle, shared):
+    def __init__(self, vehicle, shared, height, width, fov):
         self.vehicle = vehicle
         self.shared = shared
 
-        self.camera_image_width = 640
-        self.camera_image_height = 480
-        self.horizontal_fov = 63
+        self.camera_image_width = height
+        self.camera_image_height = width
+        self.horizontal_fov = fov
 
     def hesap(self, pos):
         aspect_ratio = float(self.camera_image_width) / self.camera_image_height
@@ -16,20 +16,23 @@ class PositionEstimator :
         vertical_fov_rad = 2 * math.atan(math.tan(horizontal_fov_rad / 2) / aspect_ratio)
 
         print("vertical_fov:", math.degrees(vertical_fov_rad))
-        print("self.horizontal_fov:", self.horizontal_fov)
+        
 
-        camera_angle = math.pi / 2 + self.vehicle.gimbal_pitch+self.vehicle.pitch - (vertical_fov_rad / 2)
+        camera_angle = math.pi / 2 + self.vehicle.gimbal_pitch + self.vehicle.pitch - (vertical_fov_rad / 2)
         height = self.vehicle.altitude
         mesafe = [0, 0]
+        print('self.vehicle.gimbal_pitch:', self.vehicle.gimbal_pitch)
+        print('camera_angle:', camera_angle)
+        print('pos', pos)
         # calculating angle for y distance of the target
         x = height / math.cos(camera_angle)
-        print("x:", x)
+        
         L = 2 * x * math.sin(vertical_fov_rad / 2)
-        print("L:", L)
         m = (self.camera_image_height - pos[1]) / self.camera_image_height * L
         n = pos[1] / self.camera_image_height * L
         h0 = x * math.cos(vertical_fov_rad / 2)
         y_offset_angle = vertical_fov_rad/2 - math.atan((n - m) / (2 * h0))
+        print("y_offset_angle:", math.degrees(y_offset_angle))
         y_angle = camera_angle + y_offset_angle
         mesafe[1] = height * math.tan(y_angle)
 

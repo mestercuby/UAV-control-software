@@ -222,8 +222,12 @@ def image_process_main(shared, isTest, position_estimator=None):
         width = 640
         height = 480
     else:
-        video_path="nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)3840, height=(int)2160, framerate=(fraction)30/1 ! nvvidconv flip-method=2 ! video/x-raw(memory:NVMM), width=(int)960, height=(int)480, format=(string)I420 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! appsink drop=1"
-        cap = cv2.VideoCapture(video_path, cv2.CAP_GSTREAMER)
+        #video_path="nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)3840, height=(int)2160, framerate=(fraction)30/1 ! nvvidconv flip-method=2 ! video/x-raw(memory:NVMM), width=(int)960, height=(int)480, format=(string)I420 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! appsink drop=1"
+        #cap = cv2.VideoCapture(video_path, cv2.CAP_GSTREAMER)
+        try:
+            cap = cv2.VideoCapture(0)
+        except:
+            cap = cv2.VideoCapture(1)
         # fps
         fps = cap.get(cv2.CAP_PROP_FPS)
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))

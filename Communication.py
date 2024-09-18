@@ -67,6 +67,7 @@ class Communication:
 
     def update_mission(self, new_message):
         command = new_message.split(' ')[0]
+        print(command)
         if command=="track":
             argument = new_message.split(' ')[1] 
             self.argument = int(argument)
