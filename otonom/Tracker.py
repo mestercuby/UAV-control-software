@@ -1,6 +1,7 @@
 import time
 import math
-
+from collections import deque
+import numpy as np
 
 class Tracker:
     def __init__(self, vehicle, shared, position_estimator,onlyroi):
@@ -25,9 +26,38 @@ class Tracker:
         d = R * c  # Distance in km
         return d
 
+    def filter_outliers_rolling_iqr(self,stream, window_size=5, iqr_factor=3):
+        rolling_window = deque(maxlen=window_size)
+        filtered_stream = []
+        print("Stream:", stream)
+        for value in stream:
+            if len(rolling_window) < window_size:
+                rolling_window.append(value)
+                filtered_stream.append(value)
+            else:
+                # Calculate rolling median and IQR
+                window_median = np.median(rolling_window)
+                q1 = np.percentile(rolling_window, 25)
+                q3 = np.percentile(rolling_window, 75)
+                iqr = q3 - q1
+
+                # Define dynamic threshold
+                lower_bound = window_median - iqr_factor * iqr
+                upper_bound = window_median + iqr_factor * iqr
+
+                if lower_bound <= value <= upper_bound:
+                    filtered_stream.append(value)
+                    rolling_window.append(value)
+                else:
+                    filtered_stream.append(None)  # Mark as outlier
+        
+        return filtered_stream[-1]
+    
     def track(self):
         flag = False
         start_timer = time.time()
+        olddet = None
+        olddists = []
         while True:
             if not self.shared.track_mission:
                 time.sleep(0.1)
@@ -36,20 +66,36 @@ class Tracker:
             detections, frame, last_update = self.shared.get_detections()
             target_id = self.shared.track_target
             target = None
-            if target_id == -1 and len(detections) > 0:
+            if target_id == -1 and len(detections) > 0 and olddet ==None:
                 target = detections[0]
+                olddet = target
+            elif target_id == -1 and len(detections) > 0:
+                for detection in detections:
+                    if detection['track_id'] == olddet['track_id']:
+                        target=detection
+                        break
+                if target is None:
+                    target = detections[0]
+                    olddet = target
             else:
                 for detection in detections:
                     if detection['track_id'] == target_id:
-                        print("Tracking:", detection['track_id'])
                         target=detection
                         break
+
             if target is not None:
+                print("Tracking:", target['track_id'])
                 lat, lon = target['position']
+                distance = target['distance']
+                print("Distance:", distance)
+                olddists.append(distance)
 
-                print("destlat:", lat)
-                print("destlon:", lon)
-
+                if self.filter_outliers_rolling_iqr(olddists) == None:
+                    print("Outlier detected, skipping")
+                    olddists.pop(-1)
+                    continue
+                    
+                print("Distance:", distance)
                 self.vehicle.set_roi(lat, lon)
                 if not self.onlyroi: 
                     self.vehicle.move_to(lat, lon)
@@ -60,7 +106,7 @@ class Tracker:
             elif time.time() - start_timer > self.timeout_second and flag:
                 self.shared.track_mission = False
                 self.vehicle.cancel_roi_mode()
-                self.vehicle.set_gimbal_angle(-60,0)
+                self.vehicle.set_gimbal_angle(-45,0)
                 flag = False
             
             time.sleep(.15)

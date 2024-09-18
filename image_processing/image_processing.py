@@ -157,7 +157,7 @@ class Detector:
 
     def load(self, cam_para_file):
         self.mapper = Mapper(cam_para_file, "MOT17")
-        self.model = YOLO('image_processing/pretrained/yolov8x.pt')
+        self.model = YOLO('image_processing/pretrained/yolov8s.pt')
         #self.model = YOLO('/home/master/Desktop/Nebula-image-processing/yolotrain/runs/detect/visdrone-s/weights/best.pt')
 
     def get_dets(self, img, conf_thresh=0, det_classes=[0]):
@@ -199,6 +199,7 @@ class Detector:
 
 
 def image_process_main(shared, isTest, position_estimator=None):
+    max_track_distance = 40
     number = -1
     class_list = [0, 2, 5, 7]
     mega_lost_dets = []
@@ -233,7 +234,6 @@ def image_process_main(shared, isTest, position_estimator=None):
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    video_out = cv2.VideoWriter('son1.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
 
     #cv2.namedWindow("demo", cv2.WINDOW_NORMAL)
     #cv2.resizeWindow("demo", width, height)
@@ -361,9 +361,11 @@ def image_process_main(shared, isTest, position_estimator=None):
         
         final_dets = []
         for detection in detections_list[0]:
-            position = (position_estimator.get_position(detection))
+            #if position_estimator.get_position(detection) < max_track_distance:
+            position, distance= position_estimator.get_position(detection)
             det=detection.to_dict()
             det['position'] = position
+            det['distance'] = distance
             final_dets.append(det)
         shared.update_detections(final_dets, frame_img)
 
@@ -373,8 +375,6 @@ def image_process_main(shared, isTest, position_estimator=None):
             time.sleep(sleep_time)
 
         old_dets = dets
-        video_out.write(frame_img)
 
     cap.release()
-    video_out.release()
     cv2.destroyAllWindows()

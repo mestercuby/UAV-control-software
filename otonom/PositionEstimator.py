@@ -1,5 +1,4 @@
 import math
-import time
 
 class PositionEstimator :
     def __init__(self, vehicle, shared, height, width, fov):
@@ -21,8 +20,6 @@ class PositionEstimator :
         camera_angle = math.pi / 2 + self.vehicle.gimbal_pitch + self.vehicle.pitch - (vertical_fov_rad / 2)
         height = self.vehicle.altitude
         mesafe = [0, 0]
-        print('self.vehicle.gimbal_pitch:', self.vehicle.gimbal_pitch)
-        print('camera_angle:', camera_angle)
         print('pos', pos)
         # calculating angle for y distance of the target
         x = height / math.cos(camera_angle)
@@ -50,6 +47,7 @@ class PositionEstimator :
         mesafe[0] = v * math.tan(x_angle)
 
         return mesafe
+    
 
     def calculate_distance(self, target_center):
         position = target_center
@@ -85,10 +83,11 @@ class PositionEstimator :
         lon1 = math.radians(self.vehicle.longitude)
         
         a = math.radians((self.vehicle.heading + target_angle + math.degrees(self.vehicle.gimbal_yaw)) % 360)
+        """
         print("self.vehicle.heading:", self.vehicle.heading)
         print("target_angle:", target_angle)
         print("self.vehicle.gimbal_yaw:", math.degrees(self.vehicle.gimbal_yaw))
-       
+        """
 
         lat2 = math.asin(math.sin(lat1) * math.cos(d / R) + math.cos(lat1) * math.sin(d / R) * math.cos(a))
         lon2 = lon1 + math.atan2(
@@ -107,4 +106,4 @@ class PositionEstimator :
         distance = (iterative_distance-distance_offset)/1000
         lat, lon = self.get_point_at_distance(distance, target_angle)
 
-        return lat, lon
+        return (lat, lon) ,iterative_distance
