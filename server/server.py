@@ -41,6 +41,9 @@ class HandleMessageThread(threading.Thread):
             except Exception as e:
                 pass
 
+    def set_client_socket(self, client_socket):
+        self.client_socket = client_socket
+
 
 class VideoServerThread(threading.Thread):
     def __init__(self, ip=socket.gethostbyname(socket.gethostname()), port=5050, buffer=1024, shared=None):
@@ -53,6 +56,7 @@ class VideoServerThread(threading.Thread):
         self.socket.bind((ip, port))
         self.timeout_seconds = 5
         self.shared = shared
+        self.message_handler = None
         self.client_socket = None
         print("[STARTING] server is starting...")
         print(f"[LISTENING] Server is listening on {ip}")
@@ -63,6 +67,7 @@ class VideoServerThread(threading.Thread):
         while True:
             self.socket.listen()
             self.client_socket, addr = self.socket.accept()
+            self.message_handler.set_client_socket(self.client_socket)
             print(f"[NEW CONNECTION] {addr} connected.")
             try:
                 while True:
@@ -98,3 +103,6 @@ class VideoServerThread(threading.Thread):
                 print(e)
                 self.client_socket.close()
                 print(f"[DISCONNECTED] {addr} disconnected.")
+
+    def set_message_handler(self, message_handler):
+        self.message_handler = message_handler
