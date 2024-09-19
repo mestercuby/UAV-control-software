@@ -53,7 +53,7 @@ def main(args):
 
         handle_message_thread.start()
 
-        tracker = Tracker(vehicle, shared, position_estimator,args.onlyroi)
+        tracker = Tracker(vehicle, shared, position_estimator,args.enable_move,args.enable_roi)
         threading.Thread(target=tracker.track).start()
 
         while True:
@@ -79,8 +79,8 @@ def main(args):
 parser = argparse.ArgumentParser(description='Process some arguments.')
 parser.add_argument('--ip', type=str, default="127.0.0.1", help='ip address')
 parser.add_argument('--isTest', type=bool, default=False, help='do you use simulation or real camera')
-parser.add_argument('--onlyroi', type=bool, default=False, help='do you want to move plane or just gimbal')
-
+parser.add_argument('--enable_move', type=bool, default=False, help='do you want to move plane')
+parser.add_argument('--enable_roi', type=bool, default=False, help='do you want to move gimbal')
 """
 parser.add_argument('--cam_para', type=str, default = "/home/master/Desktop//Otonom/image_processing/demo/cam_para.txt", help='camera parameter file name')
 parser.add_argument('--wx', type=float, default=5, help='wx')

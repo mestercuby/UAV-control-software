@@ -157,7 +157,7 @@ class Detector:
 
     def load(self, cam_para_file):
         self.mapper = Mapper(cam_para_file, "MOT17")
-        self.model = YOLO('image_processing/pretrained/yolov8s.pt')
+        self.model = YOLO('image_processing/pretrained/yolov8x.pt')
         #self.model = YOLO('/home/master/Desktop/Nebula-image-processing/yolotrain/runs/detect/visdrone-s/weights/best.pt')
 
     def get_dets(self, img, conf_thresh=0, det_classes=[0]):
@@ -220,8 +220,8 @@ def image_process_main(shared, isTest, position_estimator=None):
     if isTest:
         time.sleep(1)
         fps = 30
-        width = 640
-        height = 480
+        width = 1280
+        height = 720
     else:
         #video_path="nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)3840, height=(int)2160, framerate=(fraction)30/1 ! nvvidconv flip-method=2 ! video/x-raw(memory:NVMM), width=(int)960, height=(int)480, format=(string)I420 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! appsink drop=1"
         #cap = cv2.VideoCapture(video_path, cv2.CAP_GSTREAMER)
@@ -247,8 +247,9 @@ def image_process_main(shared, isTest, position_estimator=None):
     frame_time = 1 / fps
 
     frame_id = 1
-    print(fps)
-    print(frame_time)
+    print("Fps: ", fps)
+    print("Width: ", width)
+    print("Height: ", height)
     new_dets = []
     current_dets = []
     groups = []

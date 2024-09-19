@@ -4,11 +4,13 @@ from collections import deque
 import numpy as np
 
 class Tracker:
-    def __init__(self, vehicle, shared, position_estimator,onlyroi):
+    def __init__(self, vehicle, shared, position_estimator, enablemove=False, enableroi=False):
 
         self.vehicle = vehicle
         self.shared = shared
-        self.onlyroi=onlyroi
+        self.enablemove=enablemove
+        self.enableroi=enableroi
+
         self.position_estimator = position_estimator
 
         self.timeout_second = 5
@@ -26,7 +28,7 @@ class Tracker:
         d = R * c  # Distance in km
         return d
 
-    def filter_outliers_rolling_iqr(self,stream, window_size=5, iqr_factor=3):
+    def filter_outliers_rolling_iqr(self,stream, window_size=5, iqr_factor=5):
         rolling_window = deque(maxlen=window_size)
         filtered_stream = []
         print("Stream:", stream)
@@ -87,22 +89,21 @@ class Tracker:
                 print("Tracking:", target['track_id'])
                 lat, lon = target['position']
                 distance = target['distance']
-                print("Distance:", distance)
+                
                 olddists.append(distance)
 
                 if self.filter_outliers_rolling_iqr(olddists) == None:
-                    print("Outlier detected, skipping")
+                    print("distance outlier : ", distance)
                     olddists.pop(-1)
                     continue
                     
-                print("Distance:", distance)
-                self.vehicle.set_roi(lat, lon)
-                if not self.onlyroi: 
+                if self.enableroi:
+                    self.vehicle.set_roi(lat, lon)
+                if self.enablemove: 
                     self.vehicle.move_to(lat, lon)
-
                 start_timer = time.time()
                 flag = True
-                
+                time.sleep(0.7)
             elif time.time() - start_timer > self.timeout_second and flag:
                 self.shared.track_mission = False
                 self.vehicle.cancel_roi_mode()
