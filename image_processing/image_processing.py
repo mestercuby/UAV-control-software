@@ -199,9 +199,8 @@ class Detector:
 
 
 def image_process_main(shared, isTest, position_estimator=None):
-    max_track_distance = 40
     number = -1
-    class_list = [0, 2, 5, 7]
+    class_list = [0]
     mega_lost_dets = []
     dets_timers = {}
     dets_ids = {}
