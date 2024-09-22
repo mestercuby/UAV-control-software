@@ -18,7 +18,7 @@ def main(args):
     fps = 30
     height = 1280
     width = 720
-    horizontal_fov = 110
+    horizontal_fov = 70
 
     shared = Communication(fps)
     vehicle = Vehicle(shared)

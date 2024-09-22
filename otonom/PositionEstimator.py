@@ -12,13 +12,9 @@ class PositionEstimator :
         self.aspect_ratio = float(self.camera_image_width) / self.camera_image_height
         self.horizontal_fov_rad = math.radians(self.horizontal_fov)
         self.vertical_fov_rad = 2 * math.atan(math.tan(self.horizontal_fov_rad / 2) / self.aspect_ratio)
+        print("vertical_fov:", math.degrees(self.vertical_fov_rad))
 
     def hesap(self, pos):
-        
-
-        print("vertical_fov:", math.degrees(self.vertical_fov_rad))
-        
-
         camera_angle = math.pi / 2 + self.vehicle.gimbal_pitch + self.vehicle.pitch - (self.vertical_fov_rad / 2)
         height = self.vehicle.altitude
         mesafe = [0, 0]
